@@ -27,6 +27,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
@@ -38,8 +40,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -122,16 +122,16 @@ fun HeroBroadcastHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Editorial atmospheric gradient scrim
+            // Editorial atmospheric gradient scrim (balanced to reveal twilight architecture while keeping text crisp)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                MidnightSlate.copy(alpha = 0.72f),
-                                MidnightSlate.copy(alpha = 0.85f),
-                                MidnightSlate.copy(alpha = 0.96f)
+                                MidnightSlate.copy(alpha = 0.50f),
+                                MidnightSlate.copy(alpha = 0.64f),
+                                MidnightSlate.copy(alpha = 0.93f)
                             )
                         )
                     )
@@ -214,9 +214,10 @@ fun HeroBroadcastHeader(
                                 )
                                 Text(
                                     text = when {
-                                        locationState.isForegroundServiceActive -> "FGS • GPS"
-                                        locationState.isLiveGpsActive && !locationState.isFieldStepperMode -> "GPS"
-                                        else -> "STEPPER"
+                                        locationState.isForegroundServiceActive -> stringResource(R.string.status_fgs_gps)
+                                        locationState.isLiveGpsActive && !locationState.isFieldStepperMode -> stringResource(R.string.status_gps)
+                                        locationState.hasLocationFix -> stringResource(R.string.status_stepper)
+                                        else -> stringResource(R.string.status_standby)
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = RadarTeal,
@@ -269,7 +270,7 @@ fun HeroBroadcastHeader(
                         ) {
                             Icon(
                                 imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = stringResource(R.string.app_name),
+                                contentDescription = stringResource(R.string.cd_toggle_theme),
                                 tint = Color.White
                             )
                         }
@@ -285,14 +286,18 @@ fun HeroBroadcastHeader(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = locationState.streetBlockLabel,
+                        text = locationState.streetBlockLabel.ifBlank {
+                            stringResource(R.string.waiting_for_gps_block)
+                        },
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = locationState.neighborhoodName,
+                        text = locationState.neighborhoodName.ifBlank {
+                            stringResource(R.string.waiting_for_gps_neighborhood)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.82f),
                         maxLines = 1,
@@ -305,12 +310,15 @@ fun HeroBroadcastHeader(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = String.format(
-                                Locale.US,
-                                "LAT %.4f  LNG %.4f",
-                                locationState.latitude,
-                                locationState.longitude
-                            ),
+                            text = if (locationState.hasLocationFix) {
+                                stringResource(
+                                    R.string.lat_lng_format,
+                                    locationState.latitude,
+                                    locationState.longitude
+                                )
+                            } else {
+                                stringResource(R.string.gps_acquiring_coords)
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             color = RadarTeal
                         )
@@ -377,7 +385,7 @@ fun DocumentaryLensSelector(
                     onClick = { onSelectLens(lens) },
                     label = {
                         Text(
-                            text = lens.label,
+                            text = stringResource(lens.labelRes),
                             style = MaterialTheme.typography.labelLarge
                         )
                     },
@@ -439,36 +447,47 @@ fun LiveVoiceNarratorDeck(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header row: Voice status + Persona selector + Auto-Narrate toggle
-            Row(
+            // Header row: Voice status on row 1, Persona + Auto-Narrate pills cleanly on row 2
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.RecordVoiceOver,
-                        contentDescription = null,
-                        tint = if (narratorState.isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = when {
-                            narratorState.isSpeaking -> stringResource(R.string.tts_narrating)
-                            narratorState.isPaused -> stringResource(R.string.tts_paused)
-                            else -> stringResource(R.string.tts_standby)
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (narratorState.isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RecordVoiceOver,
+                            contentDescription = null,
+                            tint = if (narratorState.isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = when {
+                                narratorState.isSpeaking -> stringResource(R.string.tts_narrating)
+                                narratorState.isPaused -> stringResource(R.string.tts_paused)
+                                else -> stringResource(R.string.tts_standby)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (narratorState.isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Voice Persona Switcher Chip
                     Surface(
@@ -481,10 +500,12 @@ fun LiveVoiceNarratorDeck(
                             .testTag("voice_persona_cycle_button")
                     ) {
                         Text(
-                            text = narratorState.voicePersona.displayName.uppercase(Locale.US),
+                            text = stringResource(narratorState.voicePersona.displayNameRes).uppercase(Locale.getDefault()),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
                         )
                     }
 
@@ -496,18 +517,23 @@ fun LiveVoiceNarratorDeck(
                         } else {
                             MaterialTheme.colorScheme.surface
                         },
+                        border = BorderStroke(
+                            1.dp,
+                            if (autoNarrateEnabled) MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.outline
+                        ),
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .clickable { onToggleAutoNarrate(!autoNarrateEnabled) }
                             .testTag("auto_narrate_toggle")
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Icon(
-                                imageVector = if (autoNarrateEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                imageVector = if (autoNarrateEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
                                 contentDescription = stringResource(R.string.auto_narrate_label),
                                 tint = if (autoNarrateEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp)
@@ -515,7 +541,9 @@ fun LiveVoiceNarratorDeck(
                             Text(
                                 text = stringResource(R.string.auto_narrate_label),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (autoNarrateEnabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (autoNarrateEnabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -623,7 +651,7 @@ fun LiveVoiceNarratorDeck(
                     ) {
                         Icon(
                             imageVector = Icons.Default.FastRewind,
-                            contentDescription = stringResource(R.string.tts_narrating),
+                            contentDescription = stringResource(R.string.cd_prev_sentence),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -641,9 +669,9 @@ fun LiveVoiceNarratorDeck(
                         Icon(
                             imageVector = if (narratorState.isSpeaking) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (narratorState.isSpeaking) {
-                                stringResource(R.string.tts_paused)
+                                stringResource(R.string.cd_pause_narration)
                             } else {
-                                stringResource(R.string.tts_narrating)
+                                stringResource(R.string.cd_play_narration)
                             }
                         )
                     }
@@ -656,7 +684,7 @@ fun LiveVoiceNarratorDeck(
                     ) {
                         Icon(
                             imageVector = Icons.Default.FastForward,
-                            contentDescription = stringResource(R.string.tts_narrating),
+                            contentDescription = stringResource(R.string.cd_next_sentence),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -771,7 +799,7 @@ fun ForegroundLocationServiceCard(
                     )
                     Text(
                         text = if (isForegroundServiceActive) {
-                            "$streetBlockLabel • ${remainingMetersToTrigger}m"
+                            "${streetBlockLabel.ifBlank { stringResource(R.string.waiting_for_gps_block) }} • ${remainingMetersToTrigger}m"
                         } else {
                             stringResource(R.string.fgs_idle_subtitle)
                         },

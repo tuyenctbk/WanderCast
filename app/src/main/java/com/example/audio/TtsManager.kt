@@ -9,6 +9,8 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import androidx.annotation.StringRes
+import com.example.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,21 +21,25 @@ private const val TAG = "WanderCastTtsManager"
 
 enum class TtsVoicePersona(
     val displayName: String,
+    @StringRes val displayNameRes: Int,
     val pitch: Float,
     val defaultRate: Float
 ) {
     PUBLIC_RADIO_HOST(
         displayName = "Baritone Host",
+        displayNameRes = R.string.voice_persona_host,
         pitch = 0.94f,
         defaultRate = 1.0f
     ),
     FIELD_REPORTER(
         displayName = "Field Reporter",
+        displayNameRes = R.string.voice_persona_reporter,
         pitch = 1.04f,
         defaultRate = 1.08f
     ),
     NIGHT_ARCHIVIST(
         displayName = "Night Archivist",
+        displayNameRes = R.string.voice_persona_archivist,
         pitch = 0.87f,
         defaultRate = 0.93f
     )
@@ -68,6 +74,7 @@ class TtsManager(context: Context) : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null
     private var isEngineInitialized = false
+    private var preferredLocale: Locale = Locale.US
 
     private val sentences = mutableListOf<String>()
     private var currentIndex: Int = 0
@@ -104,7 +111,13 @@ class TtsManager(context: Context) : TextToSpeech.OnInitListener {
                 .build()
             engine.setAudioAttributes(speechAudioAttrs)
 
-            val langResult = engine.setLanguage(Locale.US)
+            val langResult = engine.setLanguage(preferredLocale).let { res ->
+                if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    engine.setLanguage(Locale.US)
+                } else {
+                    res
+                }
+            }
             val isLangAvailable = langResult != TextToSpeech.LANG_MISSING_DATA &&
                 langResult != TextToSpeech.LANG_NOT_SUPPORTED
 
@@ -117,23 +130,38 @@ class TtsManager(context: Context) : TextToSpeech.OnInitListener {
             _state.update {
                 it.copy(
                     isReady = isLangAvailable,
-                    engineError = if (isLangAvailable) null else "US English TTS voice data is unavailable on this device."
+                    engineError = if (isLangAvailable) null else "TTS voice data is unavailable on this device."
                 )
             }
 
             if (isLangAvailable) {
                 pendingSynthesisCallback?.invoke()
                 pendingSynthesisCallback = null
+            } else {
+                pendingSynthesisCallback = null
+                _state.update { it.copy(isSpeaking = false) }
             }
         } else {
             Log.e(TAG, "TextToSpeech initialization failed with status=$status")
             isEngineInitialized = false
+            pendingSynthesisCallback = null
             _state.update {
                 it.copy(
                     isReady = false,
+                    isSpeaking = false,
                     engineError = "TextToSpeech engine failed to initialize (code $status)."
                 )
             }
+        }
+    }
+
+    fun setLocale(locale: Locale) {
+        preferredLocale = locale
+        val engine = tts ?: return
+        if (!isEngineInitialized) return
+        val res = engine.setLanguage(locale)
+        if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+            engine.setLanguage(Locale.US)
         }
     }
 
@@ -327,16 +355,22 @@ class TtsManager(context: Context) : TextToSpeech.OnInitListener {
     }
 
     private fun speakSentenceAt(index: Int) {
+        if (!isEngineInitialized) return
         val sentence = synchronized(sentences) { sentences.getOrNull(index) } ?: return
         val params = Bundle().apply {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
         }
-        tts?.speak(
+        val res = tts?.speak(
             sentence,
             TextToSpeech.QUEUE_FLUSH,
             params,
             "utt_$index"
         )
+        if (res == TextToSpeech.ERROR) {
+            Log.w(TAG, "TTS speak returned ERROR for utterance utt_$index")
+            abandonAudioFocus()
+            _state.update { it.copy(isSpeaking = false) }
+        }
     }
 
     fun togglePlayPause() {

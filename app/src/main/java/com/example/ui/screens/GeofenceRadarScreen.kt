@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,12 +58,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -70,12 +73,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
-import com.example.location.CURATED_NEIGHBORHOOD_COORDINATES
+import com.example.data.EpisodeEntity
 import com.example.location.GeofenceNode
 import com.example.location.LocationBlockState
-import com.example.location.RealWorldWalkPreset
+import com.example.location.LocationGeofenceManager
 import com.example.ui.theme.BrassAmber
 import com.example.ui.theme.RadarTeal
 import com.example.ui.theme.SignalCoral
@@ -88,15 +93,15 @@ import kotlin.math.sin
 @Composable
 fun GeofenceRadarScreen(
     locationState: LocationBlockState,
+    savedEpisodes: List<EpisodeEntity>,
     autoTriggerEnabled: Boolean,
     hasLocationPermission: Boolean,
     onToggleAutoTrigger: (Boolean) -> Unit,
     onChangeGeofenceRadius: (Int) -> Unit,
     onStepDirection: (Double, Double) -> Unit,
-    onSelectPreset: (RealWorldWalkPreset) -> Unit,
     onTuneCustomNeighborhood: (String, Double, Double) -> Unit,
     onStartLiveGps: () -> Unit,
-    onTriggerNodeEpisode: (GeofenceNode) -> Unit,
+    onReplayNearbyEpisode: (EpisodeEntity) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -105,6 +110,44 @@ fun GeofenceRadarScreen(
     }
 
     var showCustomLocationDialog by rememberSaveable { mutableStateOf(false) }
+
+    // Derive real nearby geofence nodes solely from user-recorded Room episodes near the active GPS fix
+    val nearbyEpisodeNodes = remember(locationState, savedEpisodes) {
+        if (!locationState.hasLocationFix || savedEpisodes.isEmpty()) {
+            emptyList()
+        } else {
+            savedEpisodes.mapNotNull { ep ->
+                val dist = LocationGeofenceManager.haversineMeters(
+                    locationState.latitude,
+                    locationState.longitude,
+                    ep.latitude,
+                    ep.longitude
+                ).roundToInt()
+                if (dist <= 2000) {
+                    val bearing = LocationGeofenceManager.bearingDegrees(
+                        locationState.latitude,
+                        locationState.longitude,
+                        ep.latitude,
+                        ep.longitude
+                    )
+                    Pair(
+                        ep,
+                        GeofenceNode(
+                            id = "ep_${ep.id}",
+                            title = ep.title,
+                            zoneType = ep.category,
+                            latitude = ep.latitude,
+                            longitude = ep.longitude,
+                            radiusMeters = locationState.triggerThresholdMeters,
+                            distanceMeters = dist,
+                            bearingDegrees = bearing,
+                            isInsideZone = dist <= locationState.triggerThresholdMeters
+                        )
+                    )
+                } else null
+            }.sortedBy { it.second.distanceMeters }
+        }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -144,7 +187,7 @@ fun GeofenceRadarScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Radar,
-                                    contentDescription = "Geofence Radar",
+                                    contentDescription = stringResource(R.string.radar_header_title),
                                     tint = RadarTeal
                                 )
                                 Text(
@@ -170,12 +213,16 @@ fun GeofenceRadarScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = locationState.streetBlockLabel,
+                            text = locationState.streetBlockLabel.ifBlank {
+                                stringResource(R.string.waiting_for_gps_block)
+                            },
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = locationState.neighborhoodName,
+                            text = locationState.neighborhoodName.ifBlank {
+                                stringResource(R.string.waiting_for_gps_neighborhood)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -184,7 +231,7 @@ fun GeofenceRadarScreen(
 
                         // Topographic Radar Canvas
                         GeofenceRadarCanvas(
-                            locationState = locationState,
+                            nodes = nearbyEpisodeNodes.map { it.second },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1.15f)
@@ -278,7 +325,7 @@ fun GeofenceRadarScreen(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.grant_location_btn))
+                                    Text(stringResource(R.string.radar_live_gps_btn), maxLines = 1)
                                 }
                             }
                         }
@@ -294,52 +341,80 @@ fun GeofenceRadarScreen(
                                 onClick = { onStepDirection(0.00086, 0.0) },
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(44.dp)
                                     .testTag("step_north_button"),
                                 shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(vertical = 12.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                             ) {
-                                Icon(Icons.Default.North, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.dir_north), style = MaterialTheme.typography.labelLarge)
+                                Icon(Icons.Default.North, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = stringResource(R.string.dir_north),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             FilledTonalButton(
                                 onClick = { onStepDirection(0.0, 0.00105) },
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(44.dp)
                                     .testTag("step_east_button"),
                                 shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(vertical = 12.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                             ) {
-                                Icon(Icons.Default.East, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.dir_east), style = MaterialTheme.typography.labelLarge)
+                                Icon(Icons.Default.East, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = stringResource(R.string.dir_east),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             FilledTonalButton(
                                 onClick = { onStepDirection(-0.00086, 0.0) },
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(44.dp)
                                     .testTag("step_south_button"),
                                 shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(vertical = 12.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                             ) {
-                                Icon(Icons.Default.South, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.dir_south), style = MaterialTheme.typography.labelLarge)
+                                Icon(Icons.Default.South, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = stringResource(R.string.dir_south),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             FilledTonalButton(
                                 onClick = { onStepDirection(0.0, -0.00105) },
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(44.dp)
                                     .testTag("step_west_button"),
                                 shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(vertical = 12.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                             ) {
-                                Icon(Icons.Default.West, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.dir_west), style = MaterialTheme.typography.labelLarge)
+                                Icon(Icons.Default.West, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = stringResource(R.string.dir_west),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
 
@@ -349,8 +424,9 @@ fun GeofenceRadarScreen(
                             onClick = { showCustomLocationDialog = true },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .heightIn(min = 48.dp)
                                 .testTag("tune_custom_neighborhood_button"),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Icon(
@@ -359,7 +435,11 @@ fun GeofenceRadarScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.radar_tune_worldwide_btn))
+                            Text(
+                                text = stringResource(R.string.radar_tune_worldwide_btn),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
@@ -387,12 +467,15 @@ fun GeofenceRadarScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Auto-Trigger Documentary on Block Entry",
+                                    text = stringResource(R.string.radar_auto_trigger_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Automatically generates & narrates a new 60s episode when you walk ${locationState.triggerThresholdMeters}m into a new block.",
+                                    text = stringResource(
+                                        R.string.radar_auto_trigger_desc,
+                                        locationState.triggerThresholdMeters
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -411,12 +494,12 @@ fun GeofenceRadarScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "BLOCK GEOFENCE PERIMETER",
+                                text = stringResource(R.string.radar_perimeter_label),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${locationState.triggerThresholdMeters} METERS",
+                                text = stringResource(R.string.radar_meters_value, locationState.triggerThresholdMeters),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -432,7 +515,7 @@ fun GeofenceRadarScreen(
                 }
             }
 
-            // 4. Detected Nearby Geofence Zones Around Current Block
+            // 4. Nearby Recorded Field Zones Around Current Block
             item {
                 Text(
                     text = stringResource(R.string.radar_nearby_zones_title),
@@ -441,29 +524,51 @@ fun GeofenceRadarScreen(
                 )
             }
 
-            items(locationState.activeGeofenceNodes, key = { it.id }) { node ->
-                GeofenceNodeItemCard(
-                    node = node,
-                    onBroadcastZone = { onTriggerNodeEpisode(node) }
-                )
-            }
-
-            // 5. Curated Real-World Neighborhood Coordinates
-            item {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.radar_curated_blocks_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            items(CURATED_NEIGHBORHOOD_COORDINATES, key = { it.name }) { preset ->
-                NeighborhoodPresetCard(
-                    preset = preset,
-                    isCurrent = locationState.streetBlockLabel == preset.name,
-                    onSelect = { onSelectPreset(preset) }
-                )
+            if (nearbyEpisodeNodes.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Explore,
+                                contentDescription = null,
+                                tint = RadarTeal,
+                                modifier = Modifier.size(30.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.radar_nearby_empty_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = stringResource(R.string.radar_nearby_empty_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(nearbyEpisodeNodes, key = { it.second.id }) { (episode, node) ->
+                    GeofenceNodeItemCard(
+                        node = node,
+                        onBroadcastZone = { onReplayNearbyEpisode(episode) }
+                    )
+                }
             }
 
             item {
@@ -474,6 +579,7 @@ fun GeofenceRadarScreen(
 
     if (showCustomLocationDialog) {
         CustomNeighborhoodTunerDialog(
+            hasLocationFix = locationState.hasLocationFix,
             currentLat = locationState.latitude,
             currentLng = locationState.longitude,
             onDismiss = { showCustomLocationDialog = false },
@@ -487,7 +593,7 @@ fun GeofenceRadarScreen(
 
 @Composable
 private fun GeofenceRadarCanvas(
-    locationState: LocationBlockState,
+    nodes: List<GeofenceNode>,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "radar_sweep")
@@ -540,15 +646,24 @@ private fun GeofenceRadarCanvas(
                 )
             }
 
-            // Rotating Radar Sweep Beam
+            // Rotating Radar Sweep Beam + Trailing Phosphor Arc
             val rad = Math.toRadians(sweepAngle.toDouble())
             val beamEndX = centerX + (maxRadius * cos(rad)).toFloat()
             val beamEndY = centerY + (maxRadius * sin(rad)).toFloat()
 
+            drawArc(
+                color = RadarTeal.copy(alpha = 0.14f),
+                startAngle = sweepAngle - 42f,
+                sweepAngle = 42f,
+                useCenter = true,
+                topLeft = Offset(centerX - maxRadius, centerY - maxRadius),
+                size = Size(maxRadius * 2f, maxRadius * 2f)
+            )
+
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        RadarTeal.copy(alpha = 0.18f),
+                        RadarTeal.copy(alpha = 0.16f),
                         Color.Transparent
                     ),
                     center = Offset(centerX, centerY),
@@ -559,16 +674,16 @@ private fun GeofenceRadarCanvas(
             )
 
             drawLine(
-                color = RadarTeal.copy(alpha = 0.75f),
+                color = RadarTeal.copy(alpha = 0.85f),
                 start = Offset(centerX, centerY),
                 end = Offset(beamEndX, beamEndY),
                 strokeWidth = 2.dp.toPx()
             )
 
-            // Plot Nearby Geofence Nodes
-            locationState.activeGeofenceNodes.forEachIndexed { idx, node ->
+            // Plot Nearby Recorded Geofence Nodes
+            nodes.forEachIndexed { idx, node ->
                 val angleRad = Math.toRadians((node.bearingDegrees - 90f).toDouble())
-                val normalizedDist = (node.distanceMeters.toFloat() / 130f).coerceIn(0.25f, 0.92f)
+                val normalizedDist = (node.distanceMeters.toFloat() / 250f).coerceIn(0.22f, 0.92f)
                 val nodeX = centerX + (maxRadius * normalizedDist * cos(angleRad)).toFloat()
                 val nodeY = centerY + (maxRadius * normalizedDist * sin(angleRad)).toFloat()
 
@@ -606,7 +721,7 @@ private fun GeofenceRadarCanvas(
 
         // Compass Labels Overlay
         Text(
-            text = "N",
+            text = stringResource(R.string.compass_n),
             style = MaterialTheme.typography.labelSmall,
             color = BrassAmber,
             modifier = Modifier
@@ -614,7 +729,7 @@ private fun GeofenceRadarCanvas(
                 .padding(top = 6.dp)
         )
         Text(
-            text = "S",
+            text = stringResource(R.string.compass_s),
             style = MaterialTheme.typography.labelSmall,
             color = RadarTeal.copy(alpha = 0.7f),
             modifier = Modifier
@@ -622,7 +737,7 @@ private fun GeofenceRadarCanvas(
                 .padding(bottom = 6.dp)
         )
         Text(
-            text = "W",
+            text = stringResource(R.string.compass_w),
             style = MaterialTheme.typography.labelSmall,
             color = RadarTeal.copy(alpha = 0.7f),
             modifier = Modifier
@@ -630,7 +745,7 @@ private fun GeofenceRadarCanvas(
                 .padding(start = 10.dp)
         )
         Text(
-            text = "E",
+            text = stringResource(R.string.compass_e),
             style = MaterialTheme.typography.labelSmall,
             color = RadarTeal.copy(alpha = 0.7f),
             modifier = Modifier
@@ -729,7 +844,7 @@ private fun GeofenceNodeItemCard(
                             color = if (node.isInsideZone) RadarTeal else MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "• ${node.distanceMeters}m away",
+                            text = stringResource(R.string.radar_distance_away_format, node.distanceMeters),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -742,81 +857,30 @@ private fun GeofenceNodeItemCard(
                 }
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
             FilledTonalButton(
                 onClick = onBroadcastZone,
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.testTag("broadcast_node_btn_${node.id}")
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                modifier = Modifier
+                    .height(42.dp)
+                    .testTag("broadcast_node_btn_${node.id}")
             ) {
-                Text("Narrate", style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    }
-}
-
-@Composable
-private fun NeighborhoodPresetCard(
-    preset: RealWorldWalkPreset,
-    isCurrent: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() }
-            .testTag("preset_card_${preset.city}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${preset.neighborhood} • ${preset.city}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = preset.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = preset.highlightHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = stringResource(R.string.narrate_btn),
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Icon(
-                imageVector = Icons.Default.Explore,
-                contentDescription = "Jump to block",
-                tint = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
 
 @Composable
 private fun CustomNeighborhoodTunerDialog(
+    hasLocationFix: Boolean,
     currentLat: Double,
     currentLng: Double,
     onDismiss: () -> Unit,
@@ -824,32 +888,38 @@ private fun CustomNeighborhoodTunerDialog(
 ) {
     var blockName by rememberSaveable { mutableStateOf("") }
     var latInput by rememberSaveable {
-        mutableStateOf(String.format(Locale.US, "%.4f", currentLat))
+        mutableStateOf(if (hasLocationFix) String.format(Locale.US, "%.4f", currentLat) else "")
     }
     var lngInput by rememberSaveable {
-        mutableStateOf(String.format(Locale.US, "%.4f", currentLng))
+        mutableStateOf(if (hasLocationFix) String.format(Locale.US, "%.4f", currentLng) else "")
     }
+    val defaultBlockName = stringResource(R.string.radar_custom_default_name)
+
+    val parsedLat = latInput.trim().toDoubleOrNull()
+    val parsedLng = lngInput.trim().toDoubleOrNull()
+    val isValidCoordinates = parsedLat != null && parsedLng != null &&
+        parsedLat in -90.0..90.0 && parsedLng in -180.0..180.0
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Tune to Any Street or Neighborhood",
+                text = stringResource(R.string.radar_custom_dialog_title),
                 style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Enter any street corner, historic bridge, church, or neighborhood anywhere in the world to broadcast a localized 60-second Gemini radio documentary.",
+                    text = stringResource(R.string.radar_custom_dialog_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = blockName,
                     onValueChange = { blockName = it },
-                    label = { Text("Street Block or Neighborhood") },
-                    placeholder = { Text("e.g., Charles St & Beacon Hill, Boston") },
+                    label = { Text(stringResource(R.string.radar_custom_block_label)) },
+                    placeholder = { Text(stringResource(R.string.radar_custom_block_placeholder)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -859,14 +929,14 @@ private fun CustomNeighborhoodTunerDialog(
                     OutlinedTextField(
                         value = latInput,
                         onValueChange = { latInput = it },
-                        label = { Text("Latitude") },
+                        label = { Text(stringResource(R.string.radar_custom_lat_label)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = lngInput,
                         onValueChange = { lngInput = it },
-                        label = { Text("Longitude") },
+                        label = { Text(stringResource(R.string.radar_custom_lng_label)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -876,19 +946,20 @@ private fun CustomNeighborhoodTunerDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val finalName = blockName.trim().ifEmpty { "Custom Explorer Block" }
-                    val parsedLat = latInput.toDoubleOrNull() ?: currentLat
-                    val parsedLng = lngInput.toDoubleOrNull() ?: currentLng
-                    onConfirm(finalName, parsedLat, parsedLng)
+                    val finalName = blockName.trim().ifEmpty { defaultBlockName }
+                    if (parsedLat != null && parsedLng != null) {
+                        onConfirm(finalName, parsedLat, parsedLng)
+                    }
                 },
+                enabled = isValidCoordinates,
                 modifier = Modifier.testTag("confirm_custom_location_button")
             ) {
-                Text("Tune & Broadcast")
+                Text(stringResource(R.string.radar_custom_confirm_btn))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.dialog_cancel))
             }
         }
     )

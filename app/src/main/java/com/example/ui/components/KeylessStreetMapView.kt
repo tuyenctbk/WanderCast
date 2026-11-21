@@ -3,6 +3,8 @@ package com.example.ui.components
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -18,7 +20,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.R
 import com.example.data.EpisodeEntity
 import com.example.data.RouteWaypoint
 import org.json.JSONArray
@@ -76,13 +80,30 @@ fun KeylessInteractiveStreetMapView(
     var pageLoaded by remember { mutableStateOf(false) }
     var lastMapRenderTimestampMs by remember { mutableStateOf(0L) }
 
+    val labelWalkStart = stringResource(R.string.map_popup_walk_start)
+    val labelWalkFinish = stringResource(R.string.map_popup_walk_finish)
+    val labelLiveGps = stringResource(R.string.map_popup_live_gps)
+    val labelCurrentPos = stringResource(R.string.map_popup_current_pos)
+    val labelVisited = stringResource(R.string.map_popup_visited)
+    val labelUpcoming = stringResource(R.string.map_popup_upcoming)
+    val labelPointPrefix = stringResource(R.string.map_popup_point_prefix)
+    val labelNarrate = stringResource(R.string.narrate_btn)
+
     val routePayloadJson = remember(
         waypoints,
         triggeredPoints,
         visitedPointIds,
         currentGpsLat,
         currentGpsLng,
-        geofenceRadiusMeters
+        geofenceRadiusMeters,
+        labelWalkStart,
+        labelWalkFinish,
+        labelLiveGps,
+        labelCurrentPos,
+        labelVisited,
+        labelUpcoming,
+        labelPointPrefix,
+        labelNarrate
     ) {
         buildMapPayloadJson(
             waypoints = waypoints,
@@ -90,7 +111,17 @@ fun KeylessInteractiveStreetMapView(
             visitedPointIds = visitedPointIds,
             currentGpsLat = currentGpsLat,
             currentGpsLng = currentGpsLng,
-            geofenceRadiusMeters = geofenceRadiusMeters
+            geofenceRadiusMeters = geofenceRadiusMeters,
+            labels = mapOf(
+                "walkStart" to labelWalkStart,
+                "walkFinish" to labelWalkFinish,
+                "liveGps" to labelLiveGps,
+                "currentPos" to labelCurrentPos,
+                "visited" to labelVisited,
+                "upcoming" to labelUpcoming,
+                "pointPrefix" to labelPointPrefix,
+                "narrate" to labelNarrate
+            )
         )
     }
 
@@ -163,6 +194,11 @@ fun KeylessInteractiveStreetMapView(
             .testTag("keyless_street_map_webview"),
         factory = { context ->
             WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
@@ -212,9 +248,14 @@ private fun buildMapPayloadJson(
     visitedPointIds: Set<Long>,
     currentGpsLat: Double?,
     currentGpsLng: Double?,
-    geofenceRadiusMeters: Int
+    geofenceRadiusMeters: Int,
+    labels: Map<String, String>
 ): String {
     val root = JSONObject()
+    val labelsObj = JSONObject()
+    labels.forEach { (k, v) -> labelsObj.put(k, v) }
+    root.put("labels", labelsObj)
+
     val waypointsArray = JSONArray()
     waypoints.forEach { wp ->
         val obj = JSONObject()
@@ -371,11 +412,21 @@ private const val LEAFLET_MAP_HTML = """
   var hasFittedInitialBounds = false;
 
   var tileUrls = [
-    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
   ];
+
+  function applyDarkStudioTileFilter(styleIdx) {
+    var tilePane = map && map.getPane ? map.getPane('tilePane') : null;
+    if (!tilePane) return;
+    if ((styleIdx % tileUrls.length) === 0) {
+      tilePane.style.filter = 'invert(100%) hue-rotate(195deg) brightness(90%) contrast(92%) saturate(65%)';
+    } else {
+      tilePane.style.filter = 'none';
+    }
+  }
 
   function buildTileLayerOptions() {
     if (isBatterySaverTileMode) {
@@ -407,17 +458,65 @@ private const val LEAFLET_MAP_HTML = """
       .replace(/'/g, '&#39;');
   }
 
+  function isValidCoord(lat, lng) {
+    return typeof lat === 'number' && typeof lng === 'number' &&
+      isFinite(lat) && isFinite(lng) &&
+      Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  }
+
+  function safeFitBounds(bounds) {
+    if (!map || !bounds || !bounds.isValid()) return;
+    try {
+      map.invalidateSize(false);
+      var sz = map.getSize();
+      if (!sz || sz.x < 40 || sz.y < 40) {
+        setTimeout(function() { safeFitBounds(bounds); }, 180);
+        return;
+      }
+      var ne = bounds.getNorthEast();
+      var sw = bounds.getSouthWest();
+      if (ne.equals(sw)) {
+        map.setView(ne, 16);
+      } else {
+        map.fitBounds(bounds, { padding: [32, 32], maxZoom: 17, animate: false });
+      }
+    } catch (e) {
+      try {
+        map.setView([0.0, 0.0], 2);
+      } catch (_) {}
+    }
+  }
+
   function initMap() {
     if (typeof L === 'undefined') return;
+    if (map) return;
     map = L.map('map', {
       zoomControl: false,
       attributionControl: false,
       preferCanvas: true
-    }).setView([37.7955, -122.4029], 16);
+    }).setView([0.0, 0.0], 2);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     tileLayer = L.tileLayer(tileUrls[currentTileStyleIdx], buildTileLayerOptions()).addTo(map);
+    applyDarkStudioTileFilter(currentTileStyleIdx);
     routeLayerGroup = L.layerGroup().addTo(map);
+
+    if (typeof ResizeObserver !== 'undefined') {
+      var ro = new ResizeObserver(function() {
+        if (map) {
+          map.invalidateSize(false);
+          if (currentBounds && !hasFittedInitialBounds) {
+            var sz = map.getSize();
+            if (sz && sz.x >= 40 && sz.y >= 40) {
+              hasFittedInitialBounds = true;
+              safeFitBounds(currentBounds);
+            }
+          }
+        }
+      });
+      var el = document.getElementById('map');
+      if (el) ro.observe(el);
+    }
   }
 
   window.triggerPopupNarrate = function(epId) {
@@ -434,6 +533,7 @@ private const val LEAFLET_MAP_HTML = """
       map.removeLayer(tileLayer);
     }
     tileLayer = L.tileLayer(url, buildTileLayerOptions()).addTo(map);
+    applyDarkStudioTileFilter(currentTileStyleIdx);
   };
 
   window.setBatterySaverTileProfile = function(enabled) {
@@ -444,6 +544,7 @@ private const val LEAFLET_MAP_HTML = """
       map.removeLayer(tileLayer);
     }
     tileLayer = L.tileLayer(url, buildTileLayerOptions()).addTo(map);
+    applyDarkStudioTileFilter(currentTileStyleIdx);
   };
 
   window.renderTourData = function(jsonStr) {
@@ -454,13 +555,16 @@ private const val LEAFLET_MAP_HTML = """
     markersById = {};
 
     var data = JSON.parse(jsonStr);
+    var labels = data.labels || {};
     var waypoints = data.waypoints || [];
     var points = data.points || [];
     var currentGps = data.currentGps || null;
     var latlngs = [];
 
     for (var i = 0; i < waypoints.length; i++) {
-      latlngs.push([waypoints[i].lat, waypoints[i].lng]);
+      if (isValidCoord(waypoints[i].lat, waypoints[i].lng)) {
+        latlngs.push([waypoints[i].lat, waypoints[i].lng]);
+      }
     }
 
     if (latlngs.length >= 2) {
@@ -489,7 +593,7 @@ private const val LEAFLET_MAP_HTML = """
         iconAnchor: [12, 12]
       });
       L.marker(latlngs[0], { icon: startIcon })
-        .bindPopup('<div class="popup-cat">Walk Start</div><div class="popup-title">' + escapeHtml(waypoints[0].label || 'Origin') + '</div>')
+        .bindPopup('<div class="popup-cat">' + escapeHtml(labels.walkStart || 'Walk Start') + '</div><div class="popup-title">' + escapeHtml(waypoints[0].label || '') + '</div>')
         .addTo(routeLayerGroup);
 
       // End marker
@@ -501,12 +605,12 @@ private const val LEAFLET_MAP_HTML = """
         iconAnchor: [12, 12]
       });
       L.marker(latlngs[endIdx], { icon: endIcon })
-        .bindPopup('<div class="popup-cat">Walk Finish</div><div class="popup-title">' + escapeHtml(waypoints[endIdx].label || 'Destination') + '</div>')
+        .bindPopup('<div class="popup-cat">' + escapeHtml(labels.walkFinish || 'Walk Finish') + '</div><div class="popup-title">' + escapeHtml(waypoints[endIdx].label || '') + '</div>')
         .addTo(routeLayerGroup);
     }
 
     // Current Walker GPS Beacon & Active Geofence Radius
-    if (currentGps && typeof currentGps.lat === 'number' && typeof currentGps.lng === 'number') {
+    if (currentGps && isValidCoord(currentGps.lat, currentGps.lng)) {
       var gpsPos = [currentGps.lat, currentGps.lng];
       L.circle(gpsPos, {
         radius: currentGps.radius || 85,
@@ -524,12 +628,13 @@ private const val LEAFLET_MAP_HTML = """
         iconAnchor: [9, 9]
       });
       L.marker(gpsPos, { icon: gpsIcon })
-        .bindPopup('<div class="popup-cat">LIVE GPS RECEIVER</div><div class="popup-title">Your Current Position (' + (currentGps.radius || 85) + 'm Geofence)</div>')
+        .bindPopup('<div class="popup-cat">' + escapeHtml(labels.liveGps || 'GPS') + '</div><div class="popup-title">' + escapeHtml(labels.currentPos || '') + ' (' + (currentGps.radius || 85) + 'm)</div>')
         .addTo(routeLayerGroup);
     }
 
     for (var j = 0; j < points.length; j++) {
       var pt = points[j];
+      if (!isValidCoord(pt.lat, pt.lng)) continue;
       var pos = [pt.lat, pt.lng];
       latlngs.push(pos);
       var isVisited = !!pt.visited;
@@ -555,14 +660,14 @@ private const val LEAFLET_MAP_HTML = """
       });
 
       var visitedPillHtml = isVisited
-        ? '<div class="popup-visited-pill" style="background:rgba(56,211,153,0.22);color:#38D399;">✓ VISITED • GEOFENCE TRIGGERED</div>'
-        : '<div class="popup-visited-pill" style="background:rgba(245,166,35,0.18);color:#F5A623;">⏳ UPCOMING STOP</div>';
+        ? '<div class="popup-visited-pill" style="background:rgba(56,211,153,0.22);color:#38D399;">' + escapeHtml(labels.visited || 'VISITED') + '</div>'
+        : '<div class="popup-visited-pill" style="background:rgba(245,166,35,0.18);color:#F5A623;">' + escapeHtml(labels.upcoming || 'UPCOMING') + '</div>';
 
-      var popupHtml = '<div class="popup-cat">POINT ' + numLabel + ' • ' + escapeHtml(pt.category) + '</div>' +
+      var popupHtml = '<div class="popup-cat">' + escapeHtml(labels.pointPrefix || 'POINT') + ' ' + numLabel + ' • ' + escapeHtml(pt.category) + '</div>' +
         visitedPillHtml +
         '<div class="popup-title">' + escapeHtml(pt.title) + '</div>' +
         '<div class="popup-hook">“' + escapeHtml(pt.hookLine) + '”</div>' +
-        '<button class="popup-narrate-btn" onclick="window.triggerPopupNarrate(' + pt.id + ')">▶ Narrate (' + (pt.durationSeconds || 60) + 's • ' + escapeHtml(pt.voicePersona || 'Host') + ')</button>';
+        '<button class="popup-narrate-btn" onclick="window.triggerPopupNarrate(' + pt.id + ')">▶ ' + escapeHtml(labels.narrate || 'Narrate') + ' (' + (pt.durationSeconds || 60) + 's)</button>';
 
       (function(epId) {
         var m = L.marker(pos, { icon: stopIcon })
@@ -580,17 +685,32 @@ private const val LEAFLET_MAP_HTML = """
     if (latlngs.length >= 2) {
       currentBounds = L.latLngBounds(latlngs);
       if (!hasFittedInitialBounds) {
-        hasFittedInitialBounds = true;
-        map.fitBounds(currentBounds, { padding: [36, 36] });
+        var sz = map.getSize();
+        if (sz && sz.x >= 40 && sz.y >= 40) {
+          hasFittedInitialBounds = true;
+          safeFitBounds(currentBounds);
+        } else {
+          setTimeout(function() {
+            hasFittedInitialBounds = true;
+            safeFitBounds(currentBounds);
+          }, 220);
+        }
       }
     } else if (latlngs.length === 1) {
+      map.invalidateSize(false);
       map.setView(latlngs[0], 16);
     }
   };
 
   window.focusPointById = function(id, lat, lng) {
-    if (!map) return;
-    map.flyTo([lat, lng], 17, { duration: 0.55 });
+    if (!map || !isValidCoord(lat, lng)) return;
+    map.invalidateSize(false);
+    var sz = map.getSize();
+    if (sz && sz.x >= 40 && sz.y >= 40) {
+      map.flyTo([lat, lng], 17, { duration: 0.55 });
+    } else {
+      map.setView([lat, lng], 17);
+    }
     var marker = markersById[id];
     if (marker) {
       marker.openPopup();
@@ -599,7 +719,7 @@ private const val LEAFLET_MAP_HTML = """
 
   window.fitTourBounds = function() {
     if (map && currentBounds) {
-      map.fitBounds(currentBounds, { padding: [36, 36] });
+      safeFitBounds(currentBounds);
     }
   };
 

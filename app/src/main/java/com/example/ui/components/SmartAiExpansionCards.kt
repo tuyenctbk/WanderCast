@@ -13,6 +13,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,6 +73,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.audio.NarratorState
@@ -135,38 +137,46 @@ fun SmartQuotaAndSpatialCacheCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Savings,
-                            contentDescription = "Zero-Cost Quota & Spatial Cache",
+                            contentDescription = stringResource(R.string.smart_quota_title),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.smart_quota_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(50)
                         ) {
                             Text(
-                                text = stringResource(R.string.smart_quota_title),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                text = stringResource(quotaStats.selectedTier.badgeRes),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                             )
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(50)
-                            ) {
-                                Text(
-                                    text = quotaStats.selectedTier.badge,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
                         }
                         Text(
-                            text = "${quotaStats.selectedTier.title} • ${quotaStats.cacheHitsSavedCount} Cache Hits • ${quotaStats.dailyApiCallsUsed}/${quotaStats.dailyApiCallBudget} Budget",
+                            text = stringResource(
+                                R.string.quota_summary_format,
+                                stringResource(quotaStats.selectedTier.titleRes),
+                                quotaStats.cacheHitsSavedCount,
+                                quotaStats.dailyApiCallsUsed,
+                                quotaStats.dailyApiCallBudget
+                            ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -177,7 +187,11 @@ fun SmartQuotaAndSpatialCacheCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "Collapse Quota Manager" else "Expand Quota Manager"
+                        contentDescription = if (expanded) {
+                            stringResource(R.string.cd_quota_collapse)
+                        } else {
+                            stringResource(R.string.cd_quota_expand)
+                        }
                     )
                 }
             }
@@ -188,7 +202,7 @@ fun SmartQuotaAndSpatialCacheCard(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "SELECT $0-DEVELOPER-COST ROUTING, BYOK & FALLBACK PLAN",
+                        text = stringResource(R.string.quota_routing_header),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -205,7 +219,7 @@ fun SmartQuotaAndSpatialCacheCard(
                             FilterChip(
                                 selected = selected,
                                 onClick = { onSelectTier(tier) },
-                                label = { Text(tier.title) },
+                                label = { Text(stringResource(tier.titleRes)) },
                                 leadingIcon = if (selected) {
                                     {
                                         Icon(
@@ -226,7 +240,7 @@ fun SmartQuotaAndSpatialCacheCard(
 
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = quotaStats.selectedTier.description,
+                        text = stringResource(quotaStats.selectedTier.descriptionRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -250,15 +264,15 @@ fun SmartQuotaAndSpatialCacheCard(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Key,
-                                    contentDescription = "BYOK Gemini Key Vault",
+                                    contentDescription = stringResource(R.string.quota_byok_optional_header),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = if (quotaStats.hasUserByokKey) {
-                                        "BYOK PERSONAL KEY ACTIVE (${quotaStats.maskedByokKey})"
+                                        stringResource(R.string.quota_byok_active_format, quotaStats.maskedByokKey)
                                     } else {
-                                        "OPTIONAL BYOK • BRING YOUR OWN GEMINI API KEY"
+                                        stringResource(R.string.quota_byok_optional_header)
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
@@ -266,51 +280,64 @@ fun SmartQuotaAndSpatialCacheCard(
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Power users can paste their own personal Google AI Studio key for unlimited daily walks at $0 developer cost. Stored strictly on-device.",
+                                text = stringResource(R.string.quota_byok_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 OutlinedTextField(
                                     value = byokInput,
                                     onValueChange = { byokInput = it },
                                     placeholder = {
                                         Text(
-                                            if (quotaStats.hasUserByokKey) "Saved: ${quotaStats.maskedByokKey}"
-                                            else "Paste AIzaSy... Gemini key (optional)"
+                                            if (quotaStats.hasUserByokKey) {
+                                                stringResource(R.string.quota_byok_saved_placeholder, quotaStats.maskedByokKey)
+                                            } else {
+                                                stringResource(R.string.quota_byok_input_placeholder)
+                                            }
                                         )
                                     },
                                     singleLine = true,
                                     visualTransformation = PasswordVisualTransformation(),
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
-                                        .weight(1f)
+                                        .fillMaxWidth()
                                         .testTag("byok_key_input")
                                 )
-                                FilledTonalButton(
-                                    onClick = {
-                                        if (byokInput.trim().length >= 12) {
-                                            onSaveByokKey(byokInput.trim())
-                                            byokInput = ""
-                                        }
-                                    },
-                                    enabled = byokInput.trim().length >= 12,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.testTag("save_byok_key_btn")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Save Key")
-                                }
-                                if (quotaStats.hasUserByokKey) {
-                                    TextButton(
-                                        onClick = onClearByokKey,
-                                        modifier = Modifier.testTag("clear_byok_key_btn")
+                                    FilledTonalButton(
+                                        onClick = {
+                                            if (byokInput.trim().length >= 12) {
+                                                onSaveByokKey(byokInput.trim())
+                                                byokInput = ""
+                                            }
+                                        },
+                                        enabled = byokInput.trim().length >= 12,
+                                        shape = RoundedCornerShape(12.dp),
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                        modifier = Modifier
+                                            .height(44.dp)
+                                            .testTag("save_byok_key_btn")
                                     ) {
-                                        Text("Clear")
+                                        Text(stringResource(R.string.quota_byok_save_btn), maxLines = 1, softWrap = false)
+                                    }
+                                    if (quotaStats.hasUserByokKey) {
+                                        TextButton(
+                                            onClick = onClearByokKey,
+                                            modifier = Modifier
+                                                .height(44.dp)
+                                                .testTag("clear_byok_key_btn")
+                                        ) {
+                                            Text(stringResource(R.string.quota_byok_clear_btn), maxLines = 1, softWrap = false)
+                                        }
                                     }
                                 }
                             }
@@ -326,12 +353,18 @@ fun SmartQuotaAndSpatialCacheCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "DAILY FREE-TIER CALL CAP (AUTO-FALLBACK)",
+                            text = stringResource(R.string.quota_daily_cap_header),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "${quotaStats.dailyApiCallsUsed} / ${quotaStats.dailyApiCallBudget} Calls • ${quotaStats.gracefulFallbacksCount} Fallbacks",
+                            text = stringResource(
+                                R.string.quota_daily_cap_format,
+                                quotaStats.dailyApiCallsUsed,
+                                quotaStats.dailyApiCallBudget,
+                                quotaStats.gracefulFallbacksCount
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary
                         )
@@ -351,12 +384,15 @@ fun SmartQuotaAndSpatialCacheCard(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "65m Spatial Block Cache (0-Token Replay)",
+                                text = stringResource(R.string.quota_spatial_cache_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Automatically serves cached Room DB episodes when walking within ${quotaStats.spatialCacheRadiusMeters}m of an already-explored block.",
+                                text = stringResource(
+                                    R.string.quota_spatial_cache_desc,
+                                    quotaStats.spatialCacheRadiusMeters
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -409,9 +445,10 @@ fun UrbanTriviaChallengeCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = "Neighborhood Trivia Challenge",
+                        contentDescription = stringResource(R.string.trivia_challenge_title),
                         tint = MaterialTheme.colorScheme.primary
                     )
+                    val displayBlock = streetBlockLabel.ifBlank { stringResource(R.string.waiting_for_gps_block) }
                     Column {
                         Text(
                             text = stringResource(R.string.trivia_challenge_title),
@@ -419,7 +456,7 @@ fun UrbanTriviaChallengeCard(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "$streetBlockLabel • AI + 0-Token Archive",
+                            text = stringResource(R.string.trivia_subtitle_format, displayBlock),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -431,19 +468,25 @@ fun UrbanTriviaChallengeCard(
                 FilledTonalButton(
                     onClick = onGenerateTrivia,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.testTag("generate_urban_trivia_btn")
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .height(42.dp)
+                        .testTag("generate_urban_trivia_btn")
                 ) {
                     Text(
-                        if (triviaState is UrbanTriviaState.ActiveQuestion) {
+                        text = if (triviaState is UrbanTriviaState.ActiveQuestion) {
                             stringResource(R.string.trivia_next_btn)
                         } else {
                             stringResource(R.string.trivia_play_btn)
-                        }
+                        },
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
 
             AnimatedVisibility(visible = triviaState !is UrbanTriviaState.Idle) {
+                val displayBlock = streetBlockLabel.ifBlank { stringResource(R.string.waiting_for_gps_block) }
                 Column(modifier = Modifier.padding(top = 14.dp)) {
                     when (triviaState) {
                         is UrbanTriviaState.Generating -> {
@@ -456,7 +499,7 @@ fun UrbanTriviaChallengeCard(
                                     strokeWidth = 2.dp
                                 )
                                 Text(
-                                    text = "Crafting block trivia challenge for $streetBlockLabel…",
+                                    text = stringResource(R.string.trivia_crafting_format, displayBlock),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -481,12 +524,12 @@ fun UrbanTriviaChallengeCard(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "SOURCE: ${challenge.sourceLabel.uppercase()}",
+                                            text = stringResource(R.string.trivia_source_format, challenge.sourceLabel.uppercase()),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.secondary
                                         )
                                         Text(
-                                            text = "SCORE: ${triviaState.score} PTS • STREAK: ${triviaState.streak}🔥",
+                                            text = stringResource(R.string.trivia_score_format, triviaState.score, triviaState.streak),
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
@@ -539,7 +582,7 @@ fun UrbanTriviaChallengeCard(
                                                 if (isAnswered && isCorrectOption) {
                                                     Icon(
                                                         imageVector = Icons.Default.CheckCircle,
-                                                        contentDescription = "Correct Answer",
+                                                        contentDescription = stringResource(R.string.cd_correct_answer),
                                                         tint = MaterialTheme.colorScheme.secondary,
                                                         modifier = Modifier.size(18.dp)
                                                     )
@@ -554,9 +597,9 @@ fun UrbanTriviaChallengeCard(
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
                                             text = if (triviaState.selectedOptionIndex == challenge.correctIndex) {
-                                                "✓ CORRECT (+100 PTS) • RADIO HOST REVEAL"
+                                                stringResource(R.string.trivia_correct_reveal)
                                             } else {
-                                                "RADIO HOST HISTORICAL REVEAL"
+                                                stringResource(R.string.trivia_host_reveal)
                                             },
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary
@@ -570,6 +613,14 @@ fun UrbanTriviaChallengeCard(
                                     }
                                 }
                             }
+                        }
+
+                        is UrbanTriviaState.Error -> {
+                            Text(
+                                text = triviaState.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
 
                         is UrbanTriviaState.Idle -> Unit
@@ -613,7 +664,7 @@ fun ArchitectureVisionScannerCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Architecture & Plaque Scanner",
+                        contentDescription = stringResource(R.string.vision_scanner_title),
                         tint = MaterialTheme.colorScheme.secondary
                     )
                     Column {
@@ -623,7 +674,7 @@ fun ArchitectureVisionScannerCard(
                             color = MaterialTheme.colorScheme.secondary
                         )
                         Text(
-                            text = "AI Vision • Photo Picker",
+                            text = stringResource(R.string.vision_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -635,7 +686,10 @@ fun ArchitectureVisionScannerCard(
                 FilledTonalButton(
                     onClick = onPickArchitecturePhoto,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.testTag("scan_architecture_photo_button")
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .height(42.dp)
+                        .testTag("scan_architecture_photo_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
@@ -643,7 +697,11 @@ fun ArchitectureVisionScannerCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.vision_scanner_btn))
+                    Text(
+                        text = stringResource(R.string.vision_scanner_btn),
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
 
@@ -670,7 +728,7 @@ fun ArchitectureVisionScannerCard(
                                             strokeWidth = 2.dp
                                         )
                                         Text(
-                                            text = "Analyzing architectural details & inscriptions…",
+                                            text = stringResource(R.string.vision_analyzing),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -750,7 +808,7 @@ fun WalkingRoutePlannerCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Route,
-                        contentDescription = "3-Stop Walking Route Planner",
+                        contentDescription = stringResource(R.string.route_planner_title),
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Column {
@@ -760,7 +818,7 @@ fun WalkingRoutePlannerCard(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "3-Stop Loop • Google Maps",
+                            text = stringResource(R.string.route_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -772,9 +830,16 @@ fun WalkingRoutePlannerCard(
                 FilledTonalButton(
                     onClick = onGenerateWalkingRoute,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.testTag("generate_walking_route_button")
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .height(42.dp)
+                        .testTag("generate_walking_route_button")
                 ) {
-                    Text(stringResource(R.string.route_planner_btn))
+                    Text(
+                        text = stringResource(R.string.route_planner_btn),
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
 
@@ -791,7 +856,7 @@ fun WalkingRoutePlannerCard(
                                     strokeWidth = 2.dp
                                 )
                                 Text(
-                                    text = "Mapping 3 historic walking stops around your block…",
+                                    text = stringResource(R.string.route_mapping),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -811,7 +876,11 @@ fun WalkingRoutePlannerCard(
                                         .padding(14.dp)
                                 ) {
                                     Text(
-                                        text = "${itinerary.totalDistanceLabel.uppercase()} • ~${itinerary.totalMinutes} MIN WALK",
+                                        text = stringResource(
+                                            R.string.route_meta_format,
+                                            itinerary.totalDistanceLabel.uppercase(),
+                                            itinerary.totalMinutes
+                                        ),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -847,7 +916,11 @@ fun WalkingRoutePlannerCard(
                                             }
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = "${stop.name} (${stop.walkingMinutes} min walk)",
+                                                    text = stringResource(
+                                                        R.string.route_stop_walk_format,
+                                                        stop.name,
+                                                        stop.walkingMinutes
+                                                    ),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
@@ -891,11 +964,11 @@ fun WalkingRoutePlannerCard(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Map,
-                                            contentDescription = "Open in Google Maps",
+                                            contentDescription = stringResource(R.string.route_open_maps_btn),
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Open 3-Stop Walking Route in Google Maps")
+                                        Text(stringResource(R.string.route_open_maps_btn))
                                     }
                                 }
                             }
@@ -940,13 +1013,12 @@ fun LookaheadHeadingBufferCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -959,31 +1031,46 @@ fun LookaheadHeadingBufferCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Explore,
-                            contentDescription = "Heading Lookahead Buffer",
+                            contentDescription = stringResource(R.string.lookahead_buffer_btn),
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "HEADING VECTOR LOOKAHEAD • ${locationState.headingCardinal} (${locationState.headingDegrees.roundToInt()}°)",
+                            text = stringResource(
+                                R.string.lookahead_header_format,
+                                locationState.headingCardinal.ifBlank { stringResource(R.string.compass_n) },
+                                locationState.headingDegrees.roundToInt()
+                            ),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Next 95m Sector: ${locationState.predictedNextBlockHint}",
+                            text = stringResource(
+                                R.string.lookahead_sector_format,
+                                locationState.predictedNextBlockHint.ifBlank {
+                                    stringResource(R.string.waiting_for_gps_block)
+                                }
+                            ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
                 FilledTonalButton(
                     onClick = onPrefetchNextBlock,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.testTag("prefetch_lookahead_button")
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("prefetch_lookahead_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.FastForward,
@@ -991,7 +1078,11 @@ fun LookaheadHeadingBufferCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.lookahead_buffer_btn))
+                    Text(
+                        text = stringResource(R.string.lookahead_buffer_btn),
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
 
@@ -1018,7 +1109,11 @@ fun LookaheadHeadingBufferCard(
                                             strokeWidth = 2.dp
                                         )
                                         Text(
-                                            text = "Pre-caching 60s episode for ${lookaheadState.targetBlockHint} (${lookaheadState.bearingCardinal}) in Room Spatial Cache…",
+                                            text = stringResource(
+                                                R.string.lookahead_prefetching_format,
+                                                lookaheadState.targetBlockHint,
+                                                lookaheadState.bearingCardinal
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -1033,7 +1128,7 @@ fun LookaheadHeadingBufferCard(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "0MS CACHE WARMED • READY AHEAD",
+                                                text = stringResource(R.string.lookahead_warmed_badge),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
@@ -1061,7 +1156,7 @@ fun LookaheadHeadingBufferCard(
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Narrate")
+                                            Text(stringResource(R.string.narrate_btn))
                                         }
                                     }
                                 }
@@ -1125,9 +1220,13 @@ fun MiniOnAirTransportBar(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = if (narratorState.isSpeaking) {
-                            "ON AIR • ${narratorState.voicePersona.displayName.uppercase()} (${narratorState.speechRate}X)"
+                            stringResource(
+                                R.string.mini_bar_on_air_format,
+                                stringResource(narratorState.voicePersona.displayNameRes).uppercase(),
+                                narratorState.speechRate
+                            )
                         } else {
-                            "READY ON DECK • ${activeEpisode.stationCallSign}"
+                            stringResource(R.string.mini_bar_ready_format, activeEpisode.stationCallSign)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
@@ -1137,14 +1236,16 @@ fun MiniOnAirTransportBar(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (narratorState.activeSentence.isNotBlank() && narratorState.isSpeaking) {
                         Text(
                             text = narratorState.activeSentence,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -1158,7 +1259,11 @@ fun MiniOnAirTransportBar(
                     ) {
                         Icon(
                             imageVector = if (narratorState.isSpeaking) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (narratorState.isSpeaking) "Pause Narration" else "Play Narration",
+                            contentDescription = if (narratorState.isSpeaking) {
+                                stringResource(R.string.cd_pause_narration)
+                            } else {
+                                stringResource(R.string.cd_play_narration)
+                            },
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -1170,7 +1275,7 @@ fun MiniOnAirTransportBar(
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipNext,
-                            contentDescription = "Next Sentence",
+                            contentDescription = stringResource(R.string.cd_next_sentence),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

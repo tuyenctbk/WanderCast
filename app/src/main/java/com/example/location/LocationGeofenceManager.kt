@@ -8,6 +8,7 @@ import android.location.Location
 import android.os.Build
 import android.os.Looper
 import android.util.Log
+import com.example.R
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.math.atan2
@@ -44,78 +46,27 @@ data class GeofenceNode(
 )
 
 data class LocationBlockState(
-    val latitude: Double = 37.7955,
-    val longitude: Double = -122.4029,
-    val streetBlockLabel: String = "Montgomery & Columbus Block",
-    val neighborhoodName: String = "Jackson Square / North Beach, San Francisco",
-    val cityRegion: String = "San Francisco, CA",
-    val accuracyMeters: Float = 8f,
-    val speedMetersPerSec: Float = 1.2f,
-    val headingDegrees: Float = 28f,
-    val headingCardinal: String = "NNE",
-    val predictedNextIntersectionLat: Double = 37.7963,
-    val predictedNextIntersectionLng: Double = -122.4025,
-    val predictedNextBlockHint: String = "Columbus Ave & Kearny North Sector (+95m NNE)",
+    val hasLocationFix: Boolean = false,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val streetBlockLabel: String = "",
+    val neighborhoodName: String = "",
+    val cityRegion: String = "",
+    val accuracyMeters: Float = 0f,
+    val speedMetersPerSec: Float = 0f,
+    val headingDegrees: Float = 0f,
+    val headingCardinal: String = "",
+    val predictedNextIntersectionLat: Double = 0.0,
+    val predictedNextIntersectionLng: Double = 0.0,
+    val predictedNextBlockHint: String = "",
     val isLiveGpsActive: Boolean = false,
     val isForegroundServiceActive: Boolean = false,
     val isFieldStepperMode: Boolean = false,
     val distanceFromLastBroadcastMeters: Int = 0,
     val triggerThresholdMeters: Int = 85,
-    val blocksExploredCount: Int = 1,
+    val blocksExploredCount: Int = 0,
     val totalWalkedMeters: Int = 0,
     val activeGeofenceNodes: List<GeofenceNode> = emptyList()
-)
-
-data class RealWorldWalkPreset(
-    val name: String,
-    val neighborhood: String,
-    val city: String,
-    val latitude: Double,
-    val longitude: Double,
-    val highlightHint: String
-)
-
-val CURATED_NEIGHBORHOOD_COORDINATES = listOf(
-    RealWorldWalkPreset(
-        name = "Columbus Ave & Sentinel Block",
-        neighborhood = "North Beach / Jackson Square",
-        city = "San Francisco, CA",
-        latitude = 37.7955,
-        longitude = -122.4029,
-        highlightHint = "1907 Copper-green Flatiron facade, Beat Generation cafes & buried Gold Rush ships"
-    ),
-    RealWorldWalkPreset(
-        name = "Cortlandt Alley & Franklin St",
-        neighborhood = "Tribeca Historic Cast-Iron District",
-        city = "New York, NY",
-        latitude = 40.7181,
-        longitude = -74.0032,
-        highlightHint = "19th-century textile warehouses, shuttered freight shafts & classic corner diners"
-    ),
-    RealWorldWalkPreset(
-        name = "Division St & Damen Ave",
-        neighborhood = "Wicker Park / Ukrainian Village",
-        city = "Chicago, IL",
-        latitude = 41.9034,
-        longitude = -87.6774,
-        highlightHint = "Gilded Age beer baron mansions, cathedral domes & 24-hour neon coffee shops"
-    ),
-    RealWorldWalkPreset(
-        name = " Ballard Ave NW Historic Block",
-        neighborhood = "Old Ballard Maritime District",
-        city = "Seattle, WA",
-        latitude = 47.6665,
-        longitude = -122.3822,
-        highlightHint = "Scandinavian shingle-mill brick storefronts, salmon locks & shipwright taverns"
-    ),
-    RealWorldWalkPreset(
-        name = "South Congress & Elizabeth St",
-        neighborhood = "Bouldin Creek / SoCo",
-        city = "Austin, TX",
-        latitude = 30.2495,
-        longitude = -97.7497,
-        highlightHint = "Mid-century motor courts, creek bridges, neon bootmakers & barrio food history"
-    )
 )
 
 class LocationGeofenceManager(
@@ -136,17 +87,13 @@ class LocationGeofenceManager(
     val batteryPowerProfileState: StateFlow<BatteryPowerProfileState> =
         batteryPowerProfileManager.powerProfileState
 
-    private val _locationState = MutableStateFlow(
-        LocationBlockState(
-            activeGeofenceNodes = buildGeofenceNodesAround(37.7955, -122.4029, "Montgomery & Columbus Block")
-        )
-    )
+    private val _locationState = MutableStateFlow(LocationBlockState())
     val locationState: StateFlow<LocationBlockState> = _locationState.asStateFlow()
 
-    private var lastBroadcastLat: Double = 37.7955
-    private var lastBroadcastLng: Double = -122.4029
-    private var previousLat: Double = 37.7955
-    private var previousLng: Double = -122.4029
+    private var lastBroadcastLat: Double = 0.0
+    private var lastBroadcastLng: Double = 0.0
+    private var previousLat: Double = 0.0
+    private var previousLng: Double = 0.0
     private var hasReceivedInitialFix = false
 
     private val locationCallback = object : LocationCallback() {
@@ -319,11 +266,13 @@ class LocationGeofenceManager(
     /**
      * Advances the walker ~95 meters in the specified compass direction so the user can test
      * crossing into a new block / geofence even when indoors or using an emulator.
+     * Requires an active location fix or tuned coordinates first.
      */
-    fun stepOneBlock(deltaLat: Double, deltaLng: Double) {
+    fun stepOneBlock(deltaLat: Double, deltaLng: Double): Boolean {
         val current = _locationState.value
-        val newLat = current.latitude + deltaLat
-        val newLng = current.longitude + deltaLng
+        if (!current.hasLocationFix) return false
+        val newLat = (current.latitude + deltaLat).coerceIn(-89.9, 89.9)
+        val newLng = ((current.longitude + deltaLng + 540.0) % 360.0) - 180.0
         handleNewCoordinates(
             lat = newLat,
             lng = newLng,
@@ -331,50 +280,34 @@ class LocationGeofenceManager(
             speed = 1.4f,
             fromLiveGps = false
         )
-    }
-
-    fun jumpToCoordinatePreset(preset: RealWorldWalkPreset, triggerEpisode: Boolean = true) {
-        lastBroadcastLat = preset.latitude
-        lastBroadcastLng = preset.longitude
-        previousLat = preset.latitude
-        previousLng = preset.longitude
-        hasReceivedInitialFix = true
-
-        val nodes = buildGeofenceNodesAround(preset.latitude, preset.longitude, preset.name)
-        val updated = _locationState.value.copy(
-            latitude = preset.latitude,
-            longitude = preset.longitude,
-            streetBlockLabel = preset.name,
-            neighborhoodName = "${preset.neighborhood}, ${preset.city}",
-            cityRegion = preset.city,
-            isFieldStepperMode = true,
-            distanceFromLastBroadcastMeters = 0,
-            blocksExploredCount = _locationState.value.blocksExploredCount + 1,
-            activeGeofenceNodes = nodes
-        )
-        _locationState.value = updated
-        if (triggerEpisode) {
-            onGeofenceBlockEntered(updated)
-        }
+        return true
     }
 
     fun jumpToCustomLocation(customQueryLabel: String, lat: Double, lng: Double, triggerEpisode: Boolean = true) {
-        lastBroadcastLat = lat
-        lastBroadcastLng = lng
-        previousLat = lat
-        previousLng = lng
+        val safeLat = lat.coerceIn(-90.0, 90.0)
+        val safeLng = lng.coerceIn(-180.0, 180.0)
+        lastBroadcastLat = safeLat
+        lastBroadcastLng = safeLng
+        previousLat = safeLat
+        previousLng = safeLng
         hasReceivedInitialFix = true
 
-        val nodes = buildGeofenceNodesAround(lat, lng, customQueryLabel)
+        val (predLat, predLng) = projectPointAhead(safeLat, safeLng, 0f, 95.0)
         val updated = _locationState.value.copy(
-            latitude = lat,
-            longitude = lng,
+            hasLocationFix = true,
+            latitude = safeLat,
+            longitude = safeLng,
             streetBlockLabel = customQueryLabel,
             neighborhoodName = customQueryLabel,
+            cityRegion = customQueryLabel,
+            headingDegrees = 0f,
+            headingCardinal = "N",
+            predictedNextIntersectionLat = predLat,
+            predictedNextIntersectionLng = predLng,
+            predictedNextBlockHint = "$customQueryLabel • +95m N",
             isFieldStepperMode = true,
             distanceFromLastBroadcastMeters = 0,
-            blocksExploredCount = _locationState.value.blocksExploredCount + 1,
-            activeGeofenceNodes = nodes
+            blocksExploredCount = _locationState.value.blocksExploredCount + 1
         )
         _locationState.value = updated
         if (triggerEpisode) {
@@ -391,7 +324,8 @@ class LocationGeofenceManager(
     ) {
         scope.launch(Dispatchers.IO) {
             val current = _locationState.value
-            if (!hasReceivedInitialFix) {
+            val isFirstFix = !hasReceivedInitialFix
+            if (isFirstFix) {
                 hasReceivedInitialFix = true
                 lastBroadcastLat = lat
                 lastBroadcastLng = lng
@@ -399,7 +333,7 @@ class LocationGeofenceManager(
                 previousLng = lng
             }
 
-            val stepDist = haversineMeters(previousLat, previousLng, lat, lng).roundToInt()
+            val stepDist = if (isFirstFix) 0 else haversineMeters(previousLat, previousLng, lat, lng).roundToInt()
             val computedBearing = if (stepDist >= 3) {
                 bearingDegrees(previousLat, previousLng, lat, lng)
             } else {
@@ -413,19 +347,19 @@ class LocationGeofenceManager(
             val distFromLastBroadcast = haversineMeters(lastBroadcastLat, lastBroadcastLng, lat, lng).roundToInt()
             val geocoded = reverseGeocodeBlock(lat, lng)
             val blockTitle = geocoded.first ?: formatCoordFallbackBlock(lat, lng)
-            val neighborhood = geocoded.second ?: current.neighborhoodName
-            val city = geocoded.third ?: current.cityRegion
+            val neighborhood = geocoded.second ?: current.neighborhoodName.ifBlank { blockTitle }
+            val city = geocoded.third ?: current.cityRegion.ifBlank { neighborhood }
 
-            val crossedBlockThreshold = distFromLastBroadcast >= current.triggerThresholdMeters
-            val newBlocksCount = if (crossedBlockThreshold) {
-                current.blocksExploredCount + 1
-            } else {
-                current.blocksExploredCount
+            val crossedBlockThreshold = !isFirstFix && distFromLastBroadcast >= current.triggerThresholdMeters
+            val newBlocksCount = when {
+                isFirstFix -> current.blocksExploredCount.coerceAtLeast(1)
+                crossedBlockThreshold -> current.blocksExploredCount + 1
+                else -> current.blocksExploredCount
             }
 
-            val nodes = buildGeofenceNodesAround(lat, lng, blockTitle)
-            val predictedHint = "$blockTitle • +95m $cardinal Sector"
+            val predictedHint = "$blockTitle • +95m $cardinal"
             val newState = current.copy(
+                hasLocationFix = true,
                 latitude = lat,
                 longitude = lng,
                 streetBlockLabel = blockTitle,
@@ -442,8 +376,7 @@ class LocationGeofenceManager(
                 isFieldStepperMode = !fromLiveGps,
                 distanceFromLastBroadcastMeters = if (crossedBlockThreshold) 0 else distFromLastBroadcast,
                 blocksExploredCount = newBlocksCount,
-                totalWalkedMeters = current.totalWalkedMeters + stepDist.coerceAtMost(350),
-                activeGeofenceNodes = nodes
+                totalWalkedMeters = current.totalWalkedMeters + stepDist.coerceAtMost(350)
             )
 
             if (crossedBlockThreshold) {
@@ -456,9 +389,9 @@ class LocationGeofenceManager(
             if (newState.isForegroundServiceActive) {
                 val remainingMeters = (newState.triggerThresholdMeters - newState.distanceFromLastBroadcastMeters).coerceAtLeast(0)
                 val statusMsg = if (crossedBlockThreshold) {
-                    "Entered new block! Broadcasting 60s documentary • $neighborhood"
+                    context.getString(R.string.notif_entered_block_format, neighborhood)
                 } else {
-                    "Next episode trigger in ${remainingMeters}m • $neighborhood"
+                    context.getString(R.string.notif_next_trigger_format, remainingMeters, neighborhood)
                 }
                 LocationService.updateNotificationStatus(
                     context = context,
@@ -479,15 +412,33 @@ class LocationGeofenceManager(
         return try {
             val geocoder = Geocoder(context, Locale.getDefault())
             val address: Address? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                suspendCancellableCoroutine { cont ->
-                    geocoder.getFromLocation(lat, lng, 1) { addresses ->
-                        if (cont.isActive) {
-                            cont.resume(addresses.firstOrNull())
-                        }
+                withTimeoutOrNull(3_000L) {
+                    suspendCancellableCoroutine { cont ->
+                        geocoder.getFromLocation(
+                            lat,
+                            lng,
+                            1,
+                            object : Geocoder.GeocodeListener {
+                                override fun onGeocode(addresses: MutableList<Address>) {
+                                    if (cont.isActive) {
+                                        cont.resume(addresses.firstOrNull())
+                                    }
+                                }
+
+                                override fun onError(errorMessage: String?) {
+                                    Log.w(TAG, "Geocoder onError for ($lat, $lng): $errorMessage")
+                                    if (cont.isActive) {
+                                        cont.resume(null)
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
             } else {
-                geocoder.getFromLocation(lat, lng, 1)?.firstOrNull()
+                withTimeoutOrNull(3_000L) {
+                    geocoder.getFromLocation(lat, lng, 1)?.firstOrNull()
+                }
             }
 
             if (address != null) {
@@ -531,41 +482,7 @@ class LocationGeofenceManager(
     private fun formatCoordFallbackBlock(lat: Double, lng: Double): String {
         val ns = if (lat >= 0) "N" else "S"
         val ew = if (lng >= 0) "E" else "W"
-        return String.format(Locale.US, "Sector %.4f°%s, %.4f°%s", kotlin.math.abs(lat), ns, kotlin.math.abs(lng), ew)
-    }
-
-    private fun buildGeofenceNodesAround(
-        centerLat: Double,
-        centerLng: Double,
-        blockLabel: String
-    ): List<GeofenceNode> {
-        // Construct deterministic local geofence sectors around the current street grid block
-        val gridSeed = ((centerLat * 1000).roundToInt() xor (centerLng * 1000).roundToInt())
-        val offsets = listOf(
-            Triple("Historical Cornerstone", "History Marker", Pair(0.00035, 0.00020)),
-            Triple("Street Facade & Cornice Zone", "Architecture", Pair(-0.00045, 0.00038)),
-            Triple("Neighborhood Diner & Storefront", "Local Culture", Pair(0.00052, -0.00040)),
-            Triple("Bridge & Infrastructure Crossing", "Civil Grid", Pair(-0.00060, -0.00055))
-        )
-
-        return offsets.mapIndexed { idx, (label, type, delta) ->
-            val nodeLat = centerLat + delta.first
-            val nodeLng = centerLng + delta.second
-            val dist = haversineMeters(centerLat, centerLng, nodeLat, nodeLng).roundToInt()
-            val bearing = bearingDegrees(centerLat, centerLng, nodeLat, nodeLng)
-            val radius = 55 + (( idx + kotlin.math.abs(gridSeed) ) % 3) * 15
-            GeofenceNode(
-                id = "node_${idx}_$blockLabel",
-                title = "$label • ${blockLabel.take(22)}",
-                zoneType = type,
-                latitude = nodeLat,
-                longitude = nodeLng,
-                radiusMeters = radius,
-                distanceMeters = dist,
-                bearingDegrees = bearing,
-                isInsideZone = dist <= radius
-            )
-        }
+        return String.format(Locale.US, "%.4f°%s, %.4f°%s", kotlin.math.abs(lat), ns, kotlin.math.abs(lng), ew)
     }
 
     companion object {

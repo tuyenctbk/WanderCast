@@ -4,28 +4,30 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import java.util.Locale
+import androidx.annotation.StringRes
+import com.example.BuildConfig
+import com.example.R
 import kotlin.math.pow
 
 enum class SmartPromptType(
     val id: String,
-    val title: String,
-    val badgeTag: String
+    @StringRes val titleRes: Int,
+    @StringRes val badgeTagRes: Int
 ) {
     APP_UPDATE(
         id = "APP_UPDATE",
-        title = "WanderCast 1.5.0 Studio Update Available",
-        badgeTag = "VERSION 1.5.0 • NON-INTRUSIVE RELEASE"
+        titleRes = R.string.smart_prompt_update_title,
+        badgeTagRes = R.string.smart_prompt_update_badge
     ),
     RATE_APP(
         id = "RATE_APP",
-        title = "Enjoying WanderCast 99.1 FM?",
-        badgeTag = "PEAK DELIGHT • LISTENER FEEDBACK"
+        titleRes = R.string.smart_prompt_rate_title,
+        badgeTagRes = R.string.smart_prompt_rate_badge
     ),
     SHARE_APP(
         id = "SHARE_APP",
-        title = "Share Your Walk & Invite Fellow Explorers",
-        badgeTag = "SPREAD THE FREQUENCY • 99.1 FM"
+        titleRes = R.string.smart_prompt_share_title,
+        badgeTagRes = R.string.smart_prompt_share_badge
     )
 }
 
@@ -57,16 +59,11 @@ data class SmartAutoPopupProposal(
     val promptType: SmartPromptType,
     val triggerEvent: String,
     val delightScoreAtTrigger: Int,
-    val contextHeadline: String,
-    val contextSubtitle: String,
-    val installedVersion: String = "1.4.0",
-    val latestAvailableVersion: String = "1.5.0",
-    val releaseNotes: List<String> = listOf(
-        "Spatial 3D binaural audio crossfade between street blocks",
-        "Offline vector neighborhood tile packs with 0MB background drain",
-        "Expanded historical archive crests & 20-language live radio captions"
-    ),
-    val sharePreviewMessage: String = ""
+    val activeNeighborhood: String = "",
+    val unlockedBadgesCount: Int = 0,
+    val totalWalkedMeters: Int = 0,
+    val installedVersion: String = BuildConfig.VERSION_NAME,
+    val latestAvailableVersion: String = BuildConfig.VERSION_NAME
 )
 
 data class SmartEngagementTelemetryState(
@@ -74,7 +71,7 @@ data class SmartEngagementTelemetryState(
     val sessionAgeSeconds: Long = 0L,
     val sessionPositiveActionsCount: Int = 0,
     val lifetimePositiveActionsCount: Int = 0,
-    val delightScore: Int = 35,
+    val delightScore: Int = 0,
     val promptsShownThisSession: Int = 0,
     val maxPromptsPerSession: Int = 1,
     val isColdStartProtected: Boolean = true,
@@ -88,8 +85,8 @@ data class SmartEngagementTelemetryState(
     val shareOptedOut: Boolean = false,
     val shareCooldownRemainingHours: Int = 0,
     val updateImpressionsCount: Int = 0,
-    val updateInstalledVersion: String = "1.4.0",
-    val updateAvailableVersion: String = "1.5.0",
+    val updateInstalledVersion: String = BuildConfig.VERSION_NAME,
+    val updateAvailableVersion: String = BuildConfig.VERSION_NAME,
     val updateSkippedVersion: String = "",
     val updateAppliedInSession: Boolean = false,
     val updateCooldownRemainingHours: Int = 0,
@@ -150,8 +147,8 @@ class SmartEngagementEngine(
         const val SHARE_MAX_LIFETIME_IMPRESSIONS = 5
         const val MAX_PROMPTS_PER_SESSION = 1
 
-        const val DEFAULT_INSTALLED_VERSION = "1.4.0"
-        const val LATEST_AVAILABLE_VERSION = "1.5.0"
+        val DEFAULT_INSTALLED_VERSION: String = BuildConfig.VERSION_NAME
+        val LATEST_AVAILABLE_VERSION: String = BuildConfig.VERSION_NAME
 
         fun launchShareAppIntent(context: Context, shareMessage: String) {
             val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -199,13 +196,12 @@ class SmartEngagementEngine(
         "Cold-Start Guard Active: Auto-popups are suppressed during the first 45s of app start."
 
     init {
-        val currentSessions = prefs.getInt(KEY_SESSION_COUNT, 1)
-        // Ensure a baseline session count of at least 2 on seeded installs so returning-user heuristics work smoothly after warm-up
-        val nextSession = (currentSessions + 1).coerceAtLeast(2)
+        val currentSessions = prefs.getInt(KEY_SESSION_COUNT, 0)
+        val nextSession = currentSessions + 1
         prefs.edit().putInt(KEY_SESSION_COUNT, nextSession).apply()
     }
 
-    fun getSessionNumber(): Int = prefs.getInt(KEY_SESSION_COUNT, 2)
+    fun getSessionNumber(): Int = prefs.getInt(KEY_SESSION_COUNT, 1)
 
     fun recordEventAndEvaluate(
         eventType: SmartEventType,
@@ -219,13 +215,13 @@ class SmartEngagementEngine(
         val now = System.currentTimeMillis()
 
         // 1. Update Delight Score & Session Action Counters
-        val currentDelight = prefs.getInt(KEY_DELIGHT_SCORE, 38)
+        val currentDelight = prefs.getInt(KEY_DELIGHT_SCORE, 0)
         val newDelight = (currentDelight + eventType.defaultDelightDelta).coerceIn(0, 100)
         val editor = prefs.edit().putInt(KEY_DELIGHT_SCORE, newDelight)
 
         if (eventType.defaultDelightDelta > 0) {
             sessionPositiveActions += 1
-            val lifetimeActions = prefs.getInt(KEY_LIFETIME_POSITIVE_ACTIONS, 2) + 1
+            val lifetimeActions = prefs.getInt(KEY_LIFETIME_POSITIVE_ACTIONS, 0) + 1
             editor.putInt(KEY_LIFETIME_POSITIVE_ACTIONS, lifetimeActions)
         } else if (eventType == SmartEventType.BROADCAST_ERROR) {
             editor.putLong(KEY_LAST_ERROR_TS, now)
@@ -359,7 +355,7 @@ class SmartEngagementEngine(
         unlockedBadgesCount: Int,
         totalWalkedMeters: Int
     ): SmartAutoPopupProposal {
-        val currentDelight = prefs.getInt(KEY_DELIGHT_SCORE, 72)
+        val currentDelight = prefs.getInt(KEY_DELIGHT_SCORE, 0)
         lastDecisionExplanation =
             "Manual Inspector Preview triggered for ${promptType.id} (Delight Score: $currentDelight/100)."
         return buildProposal(
@@ -614,8 +610,8 @@ class SmartEngagementEngine(
             sessionCount = getSessionNumber(),
             sessionAgeSeconds = sessionAgeMs / 1000L,
             sessionPositiveActionsCount = sessionPositiveActions,
-            lifetimePositiveActionsCount = prefs.getInt(KEY_LIFETIME_POSITIVE_ACTIONS, 2),
-            delightScore = prefs.getInt(KEY_DELIGHT_SCORE, 38),
+            lifetimePositiveActionsCount = prefs.getInt(KEY_LIFETIME_POSITIVE_ACTIONS, 0),
+            delightScore = prefs.getInt(KEY_DELIGHT_SCORE, 0),
             promptsShownThisSession = promptsShownThisSession,
             maxPromptsPerSession = MAX_PROMPTS_PER_SESSION,
             isColdStartProtected = isColdStart,
@@ -646,38 +642,15 @@ class SmartEngagementEngine(
         unlockedBadgesCount: Int,
         totalWalkedMeters: Int
     ): SmartAutoPopupProposal {
-        val shareText = String.format(
-            Locale.US,
-            "I'm exploring %s with WanderCast 99.1 FM — an AI GPS neighborhood documentary radio app! Unlocked %d digital walk badges across %dm of historic streets. Tune in: https://play.google.com/store/apps/details?id=com.aistudio.wandercast.kxmpzq",
-            activeNeighborhood,
-            unlockedBadgesCount,
-            totalWalkedMeters.coerceAtLeast(480)
+        return SmartAutoPopupProposal(
+            promptType = promptType,
+            triggerEvent = triggerEvent,
+            delightScoreAtTrigger = delightScore,
+            activeNeighborhood = activeNeighborhood,
+            unlockedBadgesCount = unlockedBadgesCount,
+            totalWalkedMeters = totalWalkedMeters,
+            installedVersion = DEFAULT_INSTALLED_VERSION,
+            latestAvailableVersion = LATEST_AVAILABLE_VERSION
         )
-        return when (promptType) {
-            SmartPromptType.RATE_APP -> SmartAutoPopupProposal(
-                promptType = SmartPromptType.RATE_APP,
-                triggerEvent = triggerEvent,
-                delightScoreAtTrigger = delightScore,
-                contextHeadline = "Enjoying Your Walk Through $activeNeighborhood?",
-                contextSubtitle = "You've unlocked $unlockedBadgesCount explorer badges and tuned into 99.1 FM street documentaries. Your quick rating helps independent urban radio thrive — and we'll never interrupt your walk at startup.",
-                sharePreviewMessage = shareText
-            )
-            SmartPromptType.SHARE_APP -> SmartAutoPopupProposal(
-                promptType = SmartPromptType.SHARE_APP,
-                triggerEvent = triggerEvent,
-                delightScoreAtTrigger = delightScore,
-                contextHeadline = "Share Your $activeNeighborhood Radio Walk",
-                contextSubtitle = "Invite a friend or fellow architecture & history fan to tune into WanderCast 99.1 FM with your latest walk telemetry card.",
-                sharePreviewMessage = shareText
-            )
-            SmartPromptType.APP_UPDATE -> SmartAutoPopupProposal(
-                promptType = SmartPromptType.APP_UPDATE,
-                triggerEvent = triggerEvent,
-                delightScoreAtTrigger = delightScore,
-                contextHeadline = "WanderCast v$LATEST_AVAILABLE_VERSION Studio Pack Is Ready",
-                contextSubtitle = "Upgrade from v$DEFAULT_INSTALLED_VERSION to v$LATEST_AVAILABLE_VERSION for spatial audio block crossfades, offline vector tile packs, and enhanced 20-language radio captions.",
-                sharePreviewMessage = shareText
-            )
-        }
     }
 }

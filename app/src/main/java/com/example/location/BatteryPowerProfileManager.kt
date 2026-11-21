@@ -21,7 +21,7 @@ enum class BatteryPowerSavingOverride(val label: String) {
 }
 
 data class BatteryPowerProfileState(
-    val deviceBatteryPercentage: Int = 82,
+    val deviceBatteryPercentage: Int = 100,
     val simulatedBatteryPercentage: Int? = null,
     val isCharging: Boolean = false,
     val lowBatteryThresholdPercent: Int = 20,
@@ -34,9 +34,7 @@ data class BatteryPowerProfileState(
     val gpsMinDisplacementMeters: Float = 8f,
     val mapTileRefreshThrottleMs: Long = 0L,
     val mapTileKeepBuffer: Int = 2,
-    val mapUpdateWhenMoving: Boolean = true,
-    val statusHeadline: String = "Standard High-Frequency Walk Profile (4s GPS • Live Map Tiles)",
-    val statusDetail: String = "Auto-activates Eco Battery Saver when device battery drops below 20%."
+    val mapUpdateWhenMoving: Boolean = true
 ) {
     val effectiveBatteryPercentage: Int
         get() = simulatedBatteryPercentage ?: deviceBatteryPercentage
@@ -118,9 +116,9 @@ class BatteryPowerProfileManager(
         return try {
             val bm = appContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
             val prop = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
-            if (prop in 1..100) prop else 82
+            if (prop in 1..100) prop else 100
         } catch (_: Exception) {
-            82
+            100
         }
     }
 
@@ -187,14 +185,6 @@ class BatteryPowerProfileManager(
         }
 
         return if (saverActive) {
-            val triggerReason = when {
-                overrideMode == BatteryPowerSavingOverride.FORCE_BATTERY_SAVER ->
-                    "Manual Eco Override Active ($effectivePct% Battery)"
-                simulatedBatteryPercent != null ->
-                    "Auto-Triggered: Battery at $effectivePct% (< $LOW_BATTERY_THRESHOLD_PERCENT% Threshold • Simulated)"
-                else ->
-                    "Auto-Triggered: Device Battery at $effectivePct% (< $LOW_BATTERY_THRESHOLD_PERCENT% Threshold)"
-            }
             BatteryPowerProfileState(
                 deviceBatteryPercentage = deviceBatteryPercent,
                 simulatedBatteryPercentage = simulatedBatteryPercent,
@@ -209,16 +199,9 @@ class BatteryPowerProfileManager(
                 gpsMinDisplacementMeters = SAVER_GPS_MIN_DISPLACEMENT_M,
                 mapTileRefreshThrottleMs = SAVER_MAP_REFRESH_THROTTLE_MS,
                 mapTileKeepBuffer = SAVER_MAP_KEEP_BUFFER,
-                mapUpdateWhenMoving = false,
-                statusHeadline = "Battery-Saving Mode Active • 18s GPS Polling & 12s Map Tile Throttle",
-                statusDetail = "$triggerReason — GPS polling slowed from 4s→18s (28m displacement) and map tile redraws throttled to preserve walk battery."
+                mapUpdateWhenMoving = false
             )
         } else {
-            val sourceNote = if (simulatedBatteryPercent != null) {
-                "Simulated Battery: $effectivePct% (≥ $LOW_BATTERY_THRESHOLD_PERCENT%)"
-            } else {
-                "Device Battery: $effectivePct%${if (deviceIsCharging) " (Charging)" else ""} (≥ $LOW_BATTERY_THRESHOLD_PERCENT%)"
-            }
             BatteryPowerProfileState(
                 deviceBatteryPercentage = deviceBatteryPercent,
                 simulatedBatteryPercentage = simulatedBatteryPercent,
@@ -233,9 +216,7 @@ class BatteryPowerProfileManager(
                 gpsMinDisplacementMeters = NORMAL_GPS_MIN_DISPLACEMENT_M,
                 mapTileRefreshThrottleMs = NORMAL_MAP_REFRESH_THROTTLE_MS,
                 mapTileKeepBuffer = NORMAL_MAP_KEEP_BUFFER,
-                mapUpdateWhenMoving = true,
-                statusHeadline = "High-Accuracy Walk Profile • 4s GPS Polling & Live Map Tiles",
-                statusDetail = "$sourceNote — Auto-switches to 18s GPS polling & 12s map tile throttle when battery drops below $LOW_BATTERY_THRESHOLD_PERCENT%."
+                mapUpdateWhenMoving = true
             )
         }
     }

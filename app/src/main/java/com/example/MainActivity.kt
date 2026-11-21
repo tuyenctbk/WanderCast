@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -70,22 +71,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -102,7 +109,10 @@ import com.example.ui.theme.WanderCastTheme
 import com.example.util.AppLocaleHelper
 import com.example.util.LanguagePickerDialog
 import com.example.viewmodel.WanderCastViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 const val ROUTE_ON_AIR = "on_air_studio"
 const val ROUTE_RADAR = "geofence_radar"
@@ -162,9 +172,24 @@ class MainActivity : ComponentActivity() {
         configureAppCheck(this, intent)
 
         // STEP 2: Enable Edge-to-Edge and initialize UI
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         setContent {
             var isDarkTheme by rememberSaveable { mutableStateOf(true) }
+
+            SideEffect {
+                val barStyle = if (isDarkTheme) {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    )
+                }
+                enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
+            }
 
             WanderCastTheme(darkTheme = isDarkTheme) {
                 Surface(
@@ -272,19 +297,35 @@ fun WanderCastApp(
         walkBadges.count { it.isUnlocked }
     }
 
+    val ioScope = rememberCoroutineScope()
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            try {
-                baseContext.contentResolver.openInputStream(uri)?.use { stream ->
-                    val bitmap = BitmapFactory.decodeStream(stream)
-                    if (bitmap != null) {
-                        viewModel.analyzeArchitectureOrPlaquePhoto(bitmap)
+            ioScope.launch {
+                val bitmap = withContext(Dispatchers.IO) {
+                    try {
+                        val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        baseContext.contentResolver.openInputStream(uri)?.use { stream ->
+                            BitmapFactory.decodeStream(stream, null, boundsOpts)
+                        }
+                        var sample = 1
+                        val maxSide = maxOf(boundsOpts.outWidth, boundsOpts.outHeight)
+                        while (maxSide / sample > 1280) {
+                            sample *= 2
+                        }
+                        val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sample }
+                        baseContext.contentResolver.openInputStream(uri)?.use { stream ->
+                            BitmapFactory.decodeStream(stream, null, decodeOpts)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainActivity", "Error decoding selected photo", e)
+                        null
                     }
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Error decoding selected photo", e)
+                if (bitmap != null) {
+                    viewModel.analyzeArchitectureOrPlaquePhoto(bitmap)
+                }
             }
         }
     }
@@ -397,7 +438,7 @@ fun WanderCastApp(
                                                     dest == WanderCastDestination.ARCHIVE && totalArchiveItems > 0 -> {
                                                         BadgedBox(
                                                             badge = {
-                                                                Badge { Text("${savedEpisodes.size}") }
+                                                                Badge { Text("$totalArchiveItems") }
                                                             }
                                                         ) {
                                                             Icon(
@@ -414,7 +455,14 @@ fun WanderCastApp(
                                                     }
                                                 }
                                             },
-                                            label = { Text(stringResource(dest.labelRes), maxLines = 1) },
+                                            label = {
+                                                Text(
+                                                    text = stringResource(dest.labelRes),
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            },
                                             modifier = Modifier.testTag(dest.testTag)
                                         )
                                     }
@@ -521,24 +569,19 @@ fun WanderCastApp(
                                 WanderCastDestination.RADAR -> {
                                     GeofenceRadarScreen(
                                         locationState = locationState,
+                                        savedEpisodes = savedEpisodes,
                                         autoTriggerEnabled = autoTriggerEnabled,
                                         hasLocationPermission = hasLocationPermission,
                                         onToggleAutoTrigger = { viewModel.setAutoTriggerOnGeofence(it) },
                                         onChangeGeofenceRadius = { viewModel.setGeofenceRadiusMeters(it) },
                                         onStepDirection = { dLat, dLng -> viewModel.stepWalkDirection(dLat, dLng) },
-                                        onSelectPreset = { preset ->
-                                            viewModel.selectNeighborhoodPreset(preset)
-                                            currentDestination = WanderCastDestination.ON_AIR
-                                        },
                                         onTuneCustomNeighborhood = { name, lat, lng ->
                                             viewModel.tuneToCustomNeighborhood(name, lat, lng)
                                             currentDestination = WanderCastDestination.ON_AIR
                                         },
                                         onStartLiveGps = { viewModel.startLiveGpsTracking() },
-                                        onTriggerNodeEpisode = { node ->
-                                            viewModel.triggerDocumentaryForCurrentBlock(
-                                                customFocusNote = "${node.zoneType}: ${node.title}"
-                                            )
+                                        onReplayNearbyEpisode = { episode ->
+                                            viewModel.playEpisodeNarration(episode)
                                             currentDestination = WanderCastDestination.ON_AIR
                                         },
                                         onNavigateBack = {
@@ -740,17 +783,16 @@ private fun BroadcastSplashOverlay(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.size(92.dp)
+                    modifier = Modifier.size(96.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Image(
-                            painter = painterResource(id = R.drawable.img_app_icon_fg_1795177312795),
-                            contentDescription = stringResource(R.string.app_name),
-                            modifier = Modifier
-                                .size(66.dp)
-                                .clip(CircleShape)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.img_app_icon_fg_1795177312795),
+                        contentDescription = stringResource(R.string.app_name),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
                 }
             }
 

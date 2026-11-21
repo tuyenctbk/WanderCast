@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer radar arc -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M30,49 A24,24 0 0,1 78,49"
+        android:strokeWidth="3.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+    <!-- Inner radio wave arc -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M38,49 A16,16 0 0,1 70,49"
+        android:strokeWidth="3.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+    <!-- Central GPS location pin -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,36 C46.8,36 41,41.8 41,49 C41,58.8 54,73 54,73 C54,73 67,58.8 67,49 C67,41.8 61.2,36 54,36 Z M54,54 C51.2,54 49,51.8 49,49 C49,46.2 51.2,44 54,44 C56.8,44 59,46.2 59,49 C59,51.8 56.8,54 54,54 Z" />
+</vector>

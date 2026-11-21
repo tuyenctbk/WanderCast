@@ -4,8 +4,10 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.R
 import com.example.audio.NarratorState
 import com.example.audio.TtsManager
 import com.example.audio.TtsVoicePersona
@@ -23,7 +25,8 @@ import com.example.location.BatteryPowerSavingOverride
 import com.example.location.LocationBlockState
 import com.example.location.LocationGeofenceManager
 import com.example.location.LocationService
-import com.example.location.RealWorldWalkPreset
+import com.example.util.AppLocaleHelper
+import com.example.util.SUPPORTED_20_LANGUAGES
 import com.example.util.SmartAutoPopupProposal
 import com.example.util.SmartEngagementEngine
 import com.example.util.SmartEngagementTelemetryState
@@ -62,36 +65,42 @@ private const val TAG = "WanderCastViewModel"
 private const val PREFS_NAME = "wandercast_smart_ai_prefs"
 private const val KEY_BYOK_GEMINI = "user_byok_gemini_api_key"
 private const val KEY_APP_LOCALE_TAG = "wandercast_app_locale_tag"
+private const val KEY_DAILY_API_DATE = "wandercast_daily_api_date"
+private const val KEY_DAILY_API_USED = "wandercast_daily_api_used"
+private const val KEY_DAILY_API_BUDGET = "wandercast_daily_api_budget"
+private const val KEY_CACHE_HITS_SAVED = "wandercast_cache_hits_saved"
+private const val KEY_SPATIAL_CACHE_ENABLED = "wandercast_spatial_cache_enabled"
+private const val KEY_SELECTED_AI_TIER = "wandercast_selected_ai_tier"
 
 enum class AiUsageTier(
-    val title: String,
+    @StringRes val titleRes: Int,
     val modelId: String,
-    val badge: String,
-    val description: String
+    @StringRes val badgeRes: Int,
+    @StringRes val descriptionRes: Int
 ) {
     ECO_FLASH_LITE(
-        title = "Eco Walk • Flash-Lite",
+        titleRes = R.string.ai_tier_eco_title,
         modelId = "gemini-3.5-flash-lite",
-        badge = "$0 FREE TIER • ULTRA FAST",
-        description = "Uses gemini-3.5-flash-lite + 65m spatial block caching for high-volume daily walks with zero billing."
+        badgeRes = R.string.ai_tier_eco_badge,
+        descriptionRes = R.string.ai_tier_eco_desc
     ),
     STUDIO_FLASH(
-        title = "Studio Broadcast • Flash 3.8",
+        titleRes = R.string.ai_tier_studio_title,
         modelId = "gemini-3.8-flash",
-        badge = "$0 FREE TIER • DEEP LORE",
-        description = "Uses gemini-3.8-flash + spatial block caching for maximum historical and architectural storytelling depth."
+        badgeRes = R.string.ai_tier_studio_badge,
+        descriptionRes = R.string.ai_tier_studio_desc
     ),
     BYOK_USER_KEY(
-        title = "BYOK • Personal Gemini Key",
+        titleRes = R.string.ai_tier_byok_title,
         modelId = "gemini-2.5-flash (BYOK)",
-        badge = "$0 DEV COST • USER KEY",
-        description = "Uses the listener's own optional Gemini API key stored locally on-device for unlimited personal quota ($0 developer cost)."
+        badgeRes = R.string.ai_tier_byok_badge,
+        descriptionRes = R.string.ai_tier_byok_desc
     ),
     CACHE_FIRST_SAVER(
-        title = "Zero-API Cache & Offline Mode",
+        titleRes = R.string.ai_tier_cache_title,
         modelId = "local-cache",
-        badge = "0 TOKENS • OFFLINE READY",
-        description = "Replays nearby cached episodes from Room DB and synthesizes on-device GPS street briefs without network calls."
+        badgeRes = R.string.ai_tier_cache_badge,
+        descriptionRes = R.string.ai_tier_cache_desc
     )
 }
 
@@ -143,6 +152,7 @@ sealed interface UrbanTriviaState {
         val score: Int = 0,
         val streak: Int = 0
     ) : UrbanTriviaState
+    data class Error(val message: String) : UrbanTriviaState
 }
 
 sealed interface EpisodeGenerationState {
@@ -282,10 +292,8 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
     private var lastLoggedScreenRoute: String = ""
 
     private var sessionStartTimestamp: Long = System.currentTimeMillis()
-    private val sessionWaypoints = mutableListOf(
-        RouteWaypoint(37.7955, -122.4029, "Montgomery & Columbus Block")
-    )
-    private val _activeSessionWaypoints = MutableStateFlow<List<RouteWaypoint>>(sessionWaypoints.toList())
+    private val sessionWaypoints = mutableListOf<RouteWaypoint>()
+    private val _activeSessionWaypoints = MutableStateFlow<List<RouteWaypoint>>(emptyList())
     val activeSessionWaypoints: StateFlow<List<RouteWaypoint>> = _activeSessionWaypoints.asStateFlow()
 
     private val sessionEpisodeIds = mutableListOf<Long>()
@@ -322,20 +330,36 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     init {
-        seedInitialRoomTourIfEmpty()
+        ttsManager.setLocale(AppLocaleHelper.parseLocale(_selectedLanguageTag.value))
+        restoreLatestEpisodeAndInitBadges()
         observeGpsGeofenceVisitsForHistoricalPoints()
         observeWalkHistoryForBadgeRewards()
         // Log session start (Cold-Start Guard inside SmartEngagementEngine guarantees 0 popups at app start!)
         logAppEvent(
             eventType = SmartEventType.APP_SESSION_START,
             screenName = "live_broadcast",
-            metadataSummary = "Session #${engagementEngine.getSessionNumber()} started • 45s Cold-Start Guard active"
+            metadataSummary = "Session #${engagementEngine.getSessionNumber()} started"
         )
+    }
+
+    private fun localizedString(@StringRes resId: Int, vararg args: Any): String {
+        val localizedCtx = AppLocaleHelper.createLocalizedContext(
+            getApplication(),
+            _selectedLanguageTag.value
+        ).context
+        return if (args.isEmpty()) localizedCtx.getString(resId) else localizedCtx.getString(resId, *args)
+    }
+
+    private fun currentLanguageNameForPrompt(): String {
+        val tag = _selectedLanguageTag.value
+        return SUPPORTED_20_LANGUAGES.firstOrNull { it.tag.equals(tag, ignoreCase = true) }
+            ?.englishName ?: "English"
     }
 
     fun setAppLanguageTag(languageTag: String) {
         _selectedLanguageTag.value = languageTag
         prefs.edit().putString(KEY_APP_LOCALE_TAG, languageTag).apply()
+        ttsManager.setLocale(com.example.util.AppLocaleHelper.parseLocale(languageTag))
         logAppEvent(
             eventType = SmartEventType.LANGUAGE_SWITCHED,
             screenName = lastLoggedScreenRoute.ifBlank { "live_broadcast" },
@@ -379,7 +403,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 )
 
                 val loc = locationState.value
-                val unlockedCount = walkBadges.value.count { it.isUnlocked }.coerceAtLeast(3)
+                val unlockedCount = walkBadges.value.count { it.isUnlocked }
                 val totalWalked = completedWalkRoutes.value.sumOf { it.route.totalDistanceMeters } +
                     loc.totalWalkedMeters
                 val isBusy = _episodeState.value is EpisodeGenerationState.Generating ||
@@ -425,9 +449,15 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
         val appContext = getApplication<Application>()
         when (current.promptType) {
             SmartPromptType.SHARE_APP -> {
+                val fallbackShare = localizedString(
+                    R.string.smart_share_message_format,
+                    current.activeNeighborhood.ifBlank { localizedString(R.string.smart_default_neighborhood) },
+                    current.unlockedBadgesCount,
+                    current.totalWalkedMeters
+                )
                 SmartEngagementEngine.launchShareAppIntent(
                     context = appContext,
-                    shareMessage = customPayload?.takeIf { it.isNotBlank() } ?: current.sharePreviewMessage
+                    shareMessage = customPayload?.takeIf { it.isNotBlank() } ?: fallbackShare
                 )
             }
             SmartPromptType.RATE_APP -> {
@@ -437,12 +467,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 }
             }
             SmartPromptType.APP_UPDATE -> {
-                if (_autoNarrateVoice.value) {
-                    ttsManager.synthesizeText(
-                        title = "Studio Update Applied",
-                        text = "WanderCast version ${current.latestAvailableVersion} studio pack enabled with spatial block crossfades and offline vector tiles."
-                    )
-                }
+                SmartEngagementEngine.launchStoreReviewOrUpdateIntent(appContext)
             }
         }
 
@@ -501,7 +526,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
     fun previewSmartPopup(promptType: SmartPromptType) {
         val loc = locationState.value
-        val unlockedCount = walkBadges.value.count { it.isUnlocked }.coerceAtLeast(3)
+        val unlockedCount = walkBadges.value.count { it.isUnlocked }
         val totalWalked = completedWalkRoutes.value.sumOf { it.route.totalDistanceMeters } +
             loc.totalWalkedMeters
         val proposal = engagementEngine.buildManualPreviewProposal(
@@ -538,6 +563,28 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
         _newlyUnlockedBadgeId.value = null
     }
 
+    private fun currentCalendarDayKey(): String {
+        val cal = Calendar.getInstance()
+        return "${cal.get(Calendar.YEAR)}-${cal.get(Calendar.DAY_OF_YEAR)}"
+    }
+
+    private fun persistQuotaStats(stats: QuotaAndCacheStats) {
+        prefs.edit()
+            .putString(KEY_DAILY_API_DATE, currentCalendarDayKey())
+            .putInt(KEY_DAILY_API_USED, stats.dailyApiCallsUsed)
+            .putInt(KEY_DAILY_API_BUDGET, stats.dailyApiCallBudget)
+            .putInt(KEY_CACHE_HITS_SAVED, stats.cacheHitsSavedCount)
+            .putBoolean(KEY_SPATIAL_CACHE_ENABLED, stats.spatialCacheEnabled)
+            .putString(KEY_SELECTED_AI_TIER, stats.selectedTier.name)
+            .apply()
+    }
+
+    private fun updateQuotaStats(transform: (QuotaAndCacheStats) -> QuotaAndCacheStats) {
+        val updated = transform(_quotaStats.value)
+        _quotaStats.value = updated
+        persistQuotaStats(updated)
+    }
+
     private fun loadInitialQuotaStats(): QuotaAndCacheStats {
         val savedKey = prefs.getString(KEY_BYOK_GEMINI, "")?.trim().orEmpty()
         val hasKey = savedKey.length >= 12
@@ -546,8 +593,28 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
         } else {
             ""
         }
+        val today = currentCalendarDayKey()
+        val savedDate = prefs.getString(KEY_DAILY_API_DATE, "") ?: ""
+        val dailyUsed = if (savedDate == today) prefs.getInt(KEY_DAILY_API_USED, 0) else 0
+        val dailyBudget = prefs.getInt(KEY_DAILY_API_BUDGET, 20).coerceIn(5, 100)
+        val cacheHits = prefs.getInt(KEY_CACHE_HITS_SAVED, 0)
+        val spatialEnabled = prefs.getBoolean(KEY_SPATIAL_CACHE_ENABLED, true)
+        val savedTierName = prefs.getString(KEY_SELECTED_AI_TIER, null)
+        val savedTier = savedTierName?.let { name ->
+            AiUsageTier.entries.firstOrNull { it.name == name }
+        }
+        val resolvedTier = when {
+            savedTier == AiUsageTier.BYOK_USER_KEY && !hasKey -> AiUsageTier.STUDIO_FLASH
+            savedTier != null -> savedTier
+            hasKey -> AiUsageTier.BYOK_USER_KEY
+            else -> AiUsageTier.STUDIO_FLASH
+        }
         return QuotaAndCacheStats(
-            selectedTier = if (hasKey) AiUsageTier.BYOK_USER_KEY else AiUsageTier.STUDIO_FLASH,
+            selectedTier = resolvedTier,
+            spatialCacheEnabled = spatialEnabled,
+            dailyApiCallsUsed = dailyUsed,
+            dailyApiCallBudget = dailyBudget,
+            cacheHitsSavedCount = cacheHits,
             hasUserByokKey = hasKey,
             maskedByokKey = masked
         )
@@ -625,25 +692,28 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
         } else {
             ""
         }
-        _quotaStats.value = _quotaStats.value.copy(
-            hasUserByokKey = hasKey,
-            maskedByokKey = masked,
-            selectedTier = if (hasKey) AiUsageTier.BYOK_USER_KEY else AiUsageTier.STUDIO_FLASH
-        )
+        updateQuotaStats {
+            it.copy(
+                hasUserByokKey = hasKey,
+                maskedByokKey = masked,
+                selectedTier = if (hasKey) AiUsageTier.BYOK_USER_KEY else AiUsageTier.STUDIO_FLASH
+            )
+        }
     }
 
     fun clearUserByokGeminiKey() {
         prefs.edit().remove(KEY_BYOK_GEMINI).apply()
-        val currentTier = _quotaStats.value.selectedTier
-        _quotaStats.value = _quotaStats.value.copy(
-            hasUserByokKey = false,
-            maskedByokKey = "",
-            selectedTier = if (currentTier == AiUsageTier.BYOK_USER_KEY) {
-                AiUsageTier.STUDIO_FLASH
-            } else {
-                currentTier
-            }
-        )
+        updateQuotaStats {
+            it.copy(
+                hasUserByokKey = false,
+                maskedByokKey = "",
+                selectedTier = if (it.selectedTier == AiUsageTier.BYOK_USER_KEY) {
+                    AiUsageTier.STUDIO_FLASH
+                } else {
+                    it.selectedTier
+                }
+            )
+        }
     }
 
     private fun getSavedByokKey(): String? {
@@ -812,15 +882,15 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun setAiUsageTier(tier: AiUsageTier) {
-        _quotaStats.value = _quotaStats.value.copy(selectedTier = tier)
+        updateQuotaStats { it.copy(selectedTier = tier) }
     }
 
     fun setSpatialCacheEnabled(enabled: Boolean) {
-        _quotaStats.value = _quotaStats.value.copy(spatialCacheEnabled = enabled)
+        updateQuotaStats { it.copy(spatialCacheEnabled = enabled) }
     }
 
     fun setDailyApiBudget(budget: Int) {
-        _quotaStats.value = _quotaStats.value.copy(dailyApiCallBudget = budget.coerceIn(5, 100))
+        updateQuotaStats { it.copy(dailyApiCallBudget = budget.coerceIn(5, 100)) }
     }
 
     fun setAutoTriggerOnGeofence(enabled: Boolean) {
@@ -839,28 +909,25 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun stepWalkDirection(deltaLat: Double, deltaLng: Double) {
-        _progressResetExplicitly.value = false
         val current = locationState.value
-        val nextLat = current.latitude + deltaLat
-        val nextLng = current.longitude + deltaLng
+        if (!current.hasLocationFix) {
+            _episodeState.value = EpisodeGenerationState.Error(localizedString(R.string.error_no_gps_fix))
+            return
+        }
+        _progressResetExplicitly.value = false
+        val nextLat = (current.latitude + deltaLat).coerceIn(-89.9, 89.9)
+        val nextLng = ((current.longitude + deltaLng + 540.0) % 360.0) - 180.0
         recordWaypointInSession(
             lat = nextLat,
             lng = nextLng,
-            label = "Step • ${String.format(Locale.US, "%.4f, %.4f", nextLat, nextLng)}"
+            label = String.format(Locale.US, "%.4f, %.4f", nextLat, nextLng)
         )
         locationManager.stepOneBlock(deltaLat, deltaLng)
     }
 
-    fun selectNeighborhoodPreset(preset: RealWorldWalkPreset) {
-        _progressResetExplicitly.value = false
-        locationManager.jumpToCoordinatePreset(
-            preset = preset,
-            triggerEpisode = _autoTriggerOnGeofence.value
-        )
-    }
-
     fun tuneToCustomNeighborhood(customName: String, lat: Double, lng: Double) {
         _progressResetExplicitly.value = false
+        recordWaypointInSession(lat = lat, lng = lng, label = customName)
         locationManager.jumpToCustomLocation(
             customQueryLabel = customName,
             lat = lat,
@@ -873,9 +940,14 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
         customFocusNote: String? = null,
         forceBypassCache: Boolean = false
     ) {
+        val current = locationState.value
+        if (!current.hasLocationFix) {
+            _episodeState.value = EpisodeGenerationState.Error(localizedString(R.string.error_no_gps_fix))
+            return
+        }
         locationManager.markCurrentBlockBroadcasted()
         generateBlockDocumentary(
-            blockState = locationState.value,
+            blockState = current,
             lens = _selectedLens.value,
             customFocusNote = customFocusNote,
             forceBypassCache = forceBypassCache
@@ -1005,10 +1077,12 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                     radiusMeters = stats.spatialCacheRadiusMeters
                 )
                 if (cached != null) {
-                    _quotaStats.value = stats.copy(
-                        cacheHitsSavedCount = stats.cacheHitsSavedCount + 1,
-                        lastDispatchFromCache = true
-                    )
+                    updateQuotaStats {
+                        it.copy(
+                            cacheHitsSavedCount = it.cacheHitsSavedCount + 1,
+                            lastDispatchFromCache = true
+                        )
+                    }
                     _activeEpisode.value = cached
                     _visitedHistoricalPointIds.value = _visitedHistoricalPointIds.value + cached.id
                     _episodeState.value = EpisodeGenerationState.Success(
@@ -1063,12 +1137,6 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
             }
 
             // 3. Route to free-tier Gemini model or user's BYOK key
-            val targetModel = if (stats.selectedTier == AiUsageTier.ECO_FLASH_LITE) {
-                ecoDocumentaryModel
-            } else {
-                studioDocumentaryModel
-            }
-
             _episodeState.value = EpisodeGenerationState.Generating(
                 blockName = blockState.streetBlockLabel,
                 lensLabel = lens.label,
@@ -1088,11 +1156,14 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
             val prompt = buildString {
                 appendLine("You are the host and producer of 'WanderCast', an award-winning localized public radio walking documentary (in the style of 99% Invisible and This American Life).")
+                appendLine("Write all text fields in ${currentLanguageNameForPrompt()}.")
                 appendLine("The listener is currently walking on foot at:")
                 appendLine("- Street / Block: ${blockState.streetBlockLabel}")
                 appendLine("- Neighborhood & City: ${blockState.neighborhoodName}")
                 appendLine("- GPS Coordinates: $coordText")
-                appendLine("- Detected Nearby Geofence Zones: $nearbyZones")
+                if (nearbyZones.isNotBlank()) {
+                    appendLine("- Detected Nearby Geofence Zones: $nearbyZones")
+                }
                 appendLine("- Documentary Editorial Lens: ${lens.label} (${lens.promptFocus})")
                 if (!customFocusNote.isNullOrBlank()) {
                     appendLine("- Listener Special Curiosity Focus: $customFocusNote")
@@ -1102,10 +1173,16 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
             }
 
             try {
+                val activeByokKey = if (usingByok) byokKey else null
                 val jsonString = withTimeout(50_000L) {
-                    if (usingByok && byokKey != null) {
-                        callUserByokGeminiJson(byokKey, prompt)
+                    if (activeByokKey != null) {
+                        callUserByokGeminiJson(activeByokKey, prompt)
                     } else {
+                        val targetModel = if (stats.selectedTier == AiUsageTier.ECO_FLASH_LITE) {
+                            ecoDocumentaryModel
+                        } else {
+                            studioDocumentaryModel
+                        }
                         targetModel.generateContent(prompt).text
                             ?: throw IllegalStateException("Model returned an empty documentary response.")
                     }
@@ -1157,10 +1234,12 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 )
                 _visitedHistoricalPointIds.value = _visitedHistoricalPointIds.value + newId
 
-                _quotaStats.value = _quotaStats.value.copy(
-                    dailyApiCallsUsed = _quotaStats.value.dailyApiCallsUsed + 1,
-                    lastDispatchFromCache = false
-                )
+                updateQuotaStats {
+                    it.copy(
+                        dailyApiCallsUsed = it.dailyApiCallsUsed + 1,
+                        lastDispatchFromCache = false
+                    )
+                }
 
                 _activeEpisode.value = savedEntity
                 _episodeState.value = EpisodeGenerationState.Success(
@@ -1177,7 +1256,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 LocationService.updateNotificationStatus(
                     context = getApplication(),
                     blockTitle = blockState.streetBlockLabel,
-                    statusSubtitle = "On Air: ${savedEntity.title}"
+                    statusSubtitle = localizedString(R.string.notif_on_air_format, savedEntity.title)
                 )
 
                 if (_autoNarrateVoice.value) {
@@ -1237,6 +1316,11 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
         val stats = _quotaStats.value
         val activeEp = _activeEpisode.value ?: savedEpisodes.value.firstOrNull()
 
+        if (!currentBlock.hasLocationFix && activeEp == null) {
+            _urbanTriviaState.value = UrbanTriviaState.Error(localizedString(R.string.error_trivia_unavailable))
+            return
+        }
+
         viewModelScope.launch {
             _urbanTriviaState.value = UrbanTriviaState.Generating
 
@@ -1247,16 +1331,21 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
             if (shouldUseLocalZeroTokenTrivia) {
                 val localChallenge = buildZeroTokenTriviaChallenge(currentBlock, activeEp)
-                _urbanTriviaState.value = UrbanTriviaState.ActiveQuestion(
-                    challenge = localChallenge,
-                    score = triviaScore,
-                    streak = triviaStreak
-                )
+                if (localChallenge != null) {
+                    _urbanTriviaState.value = UrbanTriviaState.ActiveQuestion(
+                        challenge = localChallenge,
+                        score = triviaScore,
+                        streak = triviaStreak
+                    )
+                } else {
+                    _urbanTriviaState.value = UrbanTriviaState.Error(localizedString(R.string.error_trivia_unavailable))
+                }
                 return@launch
             }
 
+            val locationName = currentBlock.streetBlockLabel.ifBlank { activeEp?.locationLabel.orEmpty() }
             val prompt = buildString {
-                appendLine("Create a fun, intriguing 3-option urban history & architecture trivia question for an explorer walking at ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName} (${currentBlock.cityRegion}).")
+                appendLine("Create a fun, intriguing 3-option urban history & architecture trivia question in ${currentLanguageNameForPrompt()} for an explorer walking at $locationName (${currentBlock.neighborhoodName}, ${currentBlock.cityRegion}).")
                 if (activeEp != null) {
                     appendLine("Context from current radio dispatch '${activeEp.title}': ${activeEp.fieldFacts.joinToString("; ")}")
                 }
@@ -1277,17 +1366,20 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 val q = json.getString("question")
                 val optsArr = json.getJSONArray("options")
                 val opts = (0 until optsArr.length()).map { optsArr.getString(it) }.take(3)
-                val correctIdx = json.optInt("correctIndex", 0).coerceIn(0, (opts.size - 1).coerceAtLeast(0))
+                if (opts.size < 3) {
+                    throw IllegalStateException("Incomplete trivia options")
+                }
+                val correctIdx = json.optInt("correctIndex", 0).coerceIn(0, opts.size - 1)
                 val explanation = json.getString("radioRevealExplanation")
 
-                _quotaStats.value = _quotaStats.value.copy(
-                    dailyApiCallsUsed = _quotaStats.value.dailyApiCallsUsed + 1
-                )
+                updateQuotaStats {
+                    it.copy(dailyApiCallsUsed = it.dailyApiCallsUsed + 1)
+                }
 
                 _urbanTriviaState.value = UrbanTriviaState.ActiveQuestion(
                     challenge = UrbanTriviaChallenge(
                         question = q,
-                        options = if (opts.size == 3) opts else listOf("1907 Copper-Frame Revival", "1849 Harbor Reclamation", "1953 Beat Era Press"),
+                        options = opts,
                         correctIndex = correctIdx,
                         radioRevealExplanation = explanation,
                         sourceLabel = stats.selectedTier.modelId
@@ -1298,16 +1390,20 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Falling back to zero-token Room DB trivia challenge: ${e.message}")
+                Log.w(TAG, "Trivia AI call failed: ${e.message}")
                 val fallbackChallenge = buildZeroTokenTriviaChallenge(currentBlock, activeEp)
-                _quotaStats.value = _quotaStats.value.copy(
-                    gracefulFallbacksCount = _quotaStats.value.gracefulFallbacksCount + 1
-                )
-                _urbanTriviaState.value = UrbanTriviaState.ActiveQuestion(
-                    challenge = fallbackChallenge,
-                    score = triviaScore,
-                    streak = triviaStreak
-                )
+                if (fallbackChallenge != null) {
+                    _quotaStats.value = _quotaStats.value.copy(
+                        gracefulFallbacksCount = _quotaStats.value.gracefulFallbacksCount + 1
+                    )
+                    _urbanTriviaState.value = UrbanTriviaState.ActiveQuestion(
+                        challenge = fallbackChallenge,
+                        score = triviaScore,
+                        streak = triviaStreak
+                    )
+                } else {
+                    _urbanTriviaState.value = UrbanTriviaState.Error(localizedString(R.string.error_trivia_unavailable))
+                }
             }
         }
     }
@@ -1328,10 +1424,9 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 streak = triviaStreak
             )
             if (_autoNarrateVoice.value) {
-                val prefix = if (isCorrect) "Spot on, urban explorer! " else "Close guess! Here is the local story: "
                 ttsManager.synthesizeText(
-                    title = "Street Trivia Reveal",
-                    text = prefix + current.challenge.radioRevealExplanation
+                    title = localizedString(R.string.trivia_challenge_title),
+                    text = current.challenge.radioRevealExplanation
                 )
             }
             if (isCorrect) {
@@ -1348,19 +1443,23 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
     private fun buildZeroTokenTriviaChallenge(
         blockState: LocationBlockState,
         episode: EpisodeEntity?
-    ): UrbanTriviaChallenge {
-        val fact = episode?.fieldFacts?.firstOrNull()
-            ?: "Built in 1907 on a diagonal cut where Columbus Ave intersects the historic Spanish street grid"
+    ): UrbanTriviaChallenge? {
+        val otherEpisodes = savedEpisodes.value.filter { it.id != episode?.id }
+        val trueFact = episode?.fieldFacts?.firstOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        val distractors = otherEpisodes
+            .flatMap { it.fieldFacts }
+            .filter { it.isNotBlank() && it != trueFact }
+            .distinct()
+            .take(2)
+        if (distractors.size < 2) return null
+
+        val blockLabel = blockState.streetBlockLabel.ifBlank { episode.locationLabel }
         return UrbanTriviaChallenge(
-            question = "While walking past ${blockState.streetBlockLabel} in ${blockState.neighborhoodName}, which historical detail defines this corridor?",
-            options = listOf(
-                fact,
-                "Constructed in 1974 as an elevated monorail terminal over the harbor",
-                "Carved from solid limestone blocks imported during the 1939 World's Fair"
-            ),
+            question = "${episode.title} — $blockLabel",
+            options = listOf(trueFact, distractors[0], distractors[1]),
             correctIndex = 0,
-            radioRevealExplanation = "$fact. ${episode?.hookLine ?: "This street corner preserves over a century of neighborhood architecture and local craft."}",
-            sourceLabel = "0-Token Room DB Archive"
+            radioRevealExplanation = "$trueFact ${episode.hookLine}",
+            sourceLabel = "Room DB"
         )
     }
 
@@ -1374,9 +1473,15 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
             _visionScannerState.value = VisionScannerState.Analyzing
             try {
                 val scaledBitmap = scaleBitmapDown(bitmap, 1024)
+                val locationContext = if (currentBlock.hasLocationFix) {
+                    "${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName}"
+                } else {
+                    "their current walking location"
+                }
                 val prompt = buildString {
                     appendLine("You are WanderCast's architectural historian and public radio host.")
-                    appendLine("The walker is currently at ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName} and photographed this building, plaque, or street artifact.")
+                    appendLine("Write all JSON string values in ${currentLanguageNameForPrompt()}.")
+                    appendLine("The walker is currently at $locationContext and photographed this building, plaque, or street artifact.")
                     appendLine("Identify the architectural style, materials, or plaque details, estimate the era, and provide a vivid 45-second (~95-110 words) radio commentary.")
                 }
 
@@ -1397,9 +1502,9 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 val era = json.getString("eraEstimate")
                 val commentary = json.getString("radioCommentary")
 
-                _quotaStats.value = _quotaStats.value.copy(
-                    dailyApiCallsUsed = _quotaStats.value.dailyApiCallsUsed + 1
-                )
+                updateQuotaStats {
+                    it.copy(dailyApiCallsUsed = it.dailyApiCallsUsed + 1)
+                }
 
                 _visionScannerState.value = VisionScannerState.Success(
                     landmarkTitle = title,
@@ -1416,50 +1521,37 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
                 if (_autoNarrateVoice.value) {
                     ttsManager.synthesizeText(
-                        title = "Architecture Lens • $title",
+                        title = title,
                         text = "$title. $style, $era. $commentary"
                     )
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Vision cloud call unavailable; providing graceful architectural field analysis", e)
-                val fallbackTitle = "Facade & Street Detail at ${currentBlock.streetBlockLabel}"
-                val fallbackStyle = "Early 20th-Century Urban Masonry & Storefront Craft"
-                val fallbackEra = "1905–1935 Era"
-                val fallbackCommentary = "Captured along ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName}. " +
-                    "Notice the proportion of the upper fenestration, the structural cornice line, and the ground-level storefront rhythm characteristic of ${currentBlock.cityRegion}'s historic commercial corridors."
-                _quotaStats.value = _quotaStats.value.copy(
-                    gracefulFallbacksCount = _quotaStats.value.gracefulFallbacksCount + 1
+                Log.w(TAG, "Vision cloud call unavailable: ${e.message}")
+                _visionScannerState.value = VisionScannerState.Error(
+                    localizedString(R.string.error_vision_unavailable)
                 )
-                _visionScannerState.value = VisionScannerState.Success(
-                    landmarkTitle = fallbackTitle,
-                    architecturalStyle = fallbackStyle,
-                    radioCommentary = fallbackCommentary,
-                    eraEstimate = fallbackEra
-                )
-                if (_autoNarrateVoice.value) {
-                    ttsManager.synthesizeText(
-                        title = "Architecture Lens • $fallbackTitle",
-                        text = "$fallbackTitle. $fallbackCommentary"
-                    )
-                }
             }
         }
     }
 
     /**
      * Generates a curated 3-stop neighborhood walking route using ultra-fast free-tier
-     * gemini-3.5-flash-lite (or BYOK / Graceful Fallback) and builds a deep-link URL to open
+     * gemini-3.5-flash-lite (or BYOK) and builds a deep-link URL to open
      * turn-by-turn walking directions in Google Maps.
      */
     fun generateWalkingTourRoute() {
         val currentBlock = locationState.value
+        if (!currentBlock.hasLocationFix) {
+            _walkingRouteState.value = WalkingRouteState.Error(localizedString(R.string.error_no_gps_fix))
+            return
+        }
         val lens = _selectedLens.value
         viewModelScope.launch {
             _walkingRouteState.value = WalkingRouteState.Generating
             val prompt = buildString {
-                appendLine("Design a fascinating 3-stop neighborhood walking audio tour starting from ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName} (GPS: ${currentBlock.latitude}, ${currentBlock.longitude}).")
+                appendLine("Design a fascinating 3-stop neighborhood walking audio tour in ${currentLanguageNameForPrompt()} starting from ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName} (GPS: ${currentBlock.latitude}, ${currentBlock.longitude}).")
                 appendLine("Editorial Theme: ${lens.label} (${lens.promptFocus}).")
                 appendLine("Provide 3 real, walkable nearby street intersections or landmarks within 15-30 minutes on foot.")
                 appendLine("Return JSON with keys: tourTitle, totalMinutes (int), totalDistanceLabel, stops (array of 3 objects with stopNumber, name, streetIntersection, walkingMinutes, storyTeaser, architecturalHighlight).")
@@ -1478,7 +1570,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 val json = JSONObject(jsonString)
                 val tourTitle = json.getString("tourTitle")
                 val totalMinutes = json.optInt("totalMinutes", 25)
-                val totalDistanceLabel = json.optString("totalDistanceLabel", "1.2 km walk")
+                val totalDistanceLabel = json.optString("totalDistanceLabel", "1.2 km")
                 val stopsArray = json.getJSONArray("stops")
                 val stops = (0 until stopsArray.length()).map { idx ->
                     val obj = stopsArray.getJSONObject(idx)
@@ -1501,44 +1593,15 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                     stops = stops
                 )
 
-                _quotaStats.value = _quotaStats.value.copy(
-                    dailyApiCallsUsed = _quotaStats.value.dailyApiCallsUsed + 1
-                )
+                updateQuotaStats {
+                    it.copy(dailyApiCallsUsed = it.dailyApiCallsUsed + 1)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Walking route cloud call unavailable; generating graceful local 3-stop loop", e)
-                val fallbackStops = currentBlock.activeGeofenceNodes.take(3).mapIndexed { idx, node ->
-                    WalkingTourStop(
-                        stopNumber = idx + 1,
-                        name = node.title.substringBefore(" •"),
-                        streetIntersection = "${currentBlock.streetBlockLabel} (+${node.distanceMeters}m)",
-                        walkingMinutes = (idx + 1) * 7,
-                        storyTeaser = "Explore the ${node.zoneType.lowercase(Locale.US)} layers and period streetscape along this sector.",
-                        architecturalHighlight = "Inspect the corner masonry, cornice profiles, and historic plaques."
-                    )
-                }.ifEmpty {
-                    listOf(
-                        WalkingTourStop(
-                            stopNumber = 1,
-                            name = "Historic Cornerstone Sector",
-                            streetIntersection = currentBlock.streetBlockLabel,
-                            walkingMinutes = 6,
-                            storyTeaser = "Trace the original street grid alignment and period facade details.",
-                            architecturalHighlight = "Cast-iron thresholds and cornice brackets"
-                        )
-                    )
-                }
-                _quotaStats.value = _quotaStats.value.copy(
-                    gracefulFallbacksCount = _quotaStats.value.gracefulFallbacksCount + 1
-                )
-                persistAndPublishWalkingItinerary(
-                    currentBlock = currentBlock,
-                    lens = lens,
-                    tourTitle = "${currentBlock.streetBlockLabel} Explorer Loop",
-                    totalMinutes = 22,
-                    totalDistanceLabel = "1.1 km loop",
-                    stops = fallbackStops
+                Log.w(TAG, "Walking route cloud call unavailable: ${e.message}")
+                _walkingRouteState.value = WalkingRouteState.Error(
+                    localizedString(R.string.error_route_unavailable)
                 )
             }
         }
@@ -1639,7 +1702,10 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
             val prompt = buildString {
                 appendLine("You are the live on-air radio documentary host of WanderCast (99.1 FM).")
-                appendLine("The walker is currently standing at ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName} (GPS: ${currentBlock.latitude}, ${currentBlock.longitude}).")
+                appendLine("Respond in ${currentLanguageNameForPrompt()}.")
+                if (currentBlock.hasLocationFix) {
+                    appendLine("The walker is currently standing at ${currentBlock.streetBlockLabel} in ${currentBlock.neighborhoodName} (GPS: ${currentBlock.latitude}, ${currentBlock.longitude}).")
+                }
                 if (currentEp != null) {
                     appendLine("Current Episode Context: '${currentEp.title}' — ${currentEp.hookLine}")
                 }
@@ -1647,29 +1713,48 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 appendLine("Respond in 3 to 4 crisp, engaging radio-narrator sentences (~65-85 words) answering their question with specific historical, architectural, or local neighborhood insight.")
             }
 
-            val streamingModel = if (stats.selectedTier == AiUsageTier.ECO_FLASH_LITE) {
-                ecoHostStreamingModel
-            } else {
-                liveHostStreamingModel
-            }
+            val byokKey = getSavedByokKey()
+            val activeByokKey = if (stats.selectedTier == AiUsageTier.BYOK_USER_KEY) byokKey else null
+            val useOfflineQa = stats.selectedTier == AiUsageTier.CACHE_FIRST_SAVER ||
+                (activeByokKey == null && stats.dailyApiCallsUsed >= stats.dailyApiCallBudget)
 
             try {
-                withTimeout(50_000L) {
-                    streamingModel.generateContentStream(prompt).collect { chunk ->
-                        val chunkText = chunk.text.orEmpty()
-                        accumulated.append(chunkText)
-                        _liveHostQaState.value = LiveHostQaState.Streaming(
-                            question = trimmed,
-                            partialReply = accumulated.toString()
+                if (useOfflineQa) {
+                    throw IllegalStateException("Offline cache mode or daily budget reached")
+                }
+                if (activeByokKey != null) {
+                    val jsonReply = withTimeout(45_000L) {
+                        callUserByokGeminiJson(
+                            activeByokKey,
+                            "$prompt\nReturn JSON with key: reply (string)."
                         )
+                    }
+                    val parsedReply = runCatching { JSONObject(jsonReply).optString("reply", jsonReply) }
+                        .getOrDefault(jsonReply)
+                    accumulated.append(parsedReply)
+                } else {
+                    val streamingModel = if (stats.selectedTier == AiUsageTier.ECO_FLASH_LITE) {
+                        ecoHostStreamingModel
+                    } else {
+                        liveHostStreamingModel
+                    }
+                    withTimeout(50_000L) {
+                        streamingModel.generateContentStream(prompt).collect { chunk ->
+                            val chunkText = chunk.text.orEmpty()
+                            accumulated.append(chunkText)
+                            _liveHostQaState.value = LiveHostQaState.Streaming(
+                                question = trimmed,
+                                partialReply = accumulated.toString()
+                            )
+                        }
                     }
                 }
 
                 val finalReply = accumulated.toString().trim()
                 if (finalReply.isNotEmpty()) {
-                    _quotaStats.value = _quotaStats.value.copy(
-                        dailyApiCallsUsed = _quotaStats.value.dailyApiCallsUsed + 1
-                    )
+                    updateQuotaStats {
+                        it.copy(dailyApiCallsUsed = it.dailyApiCallsUsed + 1)
+                    }
                     _liveHostQaState.value = LiveHostQaState.Success(
                         question = trimmed,
                         reply = finalReply
@@ -1808,47 +1893,39 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
      */
     fun logCurrentWalkSessionToHistory(customTitle: String? = null) {
         val currentLoc = locationState.value
+        val existingWaypoints = synchronized(sessionWaypoints) { sessionWaypoints.toList() }
+        if (!currentLoc.hasLocationFix && existingWaypoints.isEmpty()) return
+
         val lens = _selectedLens.value
         viewModelScope.launch {
-            val waypointsList = synchronized(sessionWaypoints) {
-                if (sessionWaypoints.isNotEmpty()) {
-                    sessionWaypoints.toList()
-                } else {
-                    listOf(
-                        RouteWaypoint(
-                            latitude = currentLoc.latitude - 0.0008,
-                            longitude = currentLoc.longitude - 0.0005,
-                            label = "Start • ${currentLoc.streetBlockLabel}"
-                        ),
-                        RouteWaypoint(
-                            latitude = currentLoc.latitude,
-                            longitude = currentLoc.longitude,
-                            label = currentLoc.streetBlockLabel
-                        )
+            val waypointsList = if (existingWaypoints.isNotEmpty()) {
+                existingWaypoints
+            } else {
+                listOf(
+                    RouteWaypoint(
+                        latitude = currentLoc.latitude,
+                        longitude = currentLoc.longitude,
+                        label = currentLoc.streetBlockLabel
                     )
-                }
+                )
             }
             val firstPoint = waypointsList.first()
             val lastPoint = waypointsList.last()
             val linkedIds = synchronized(sessionEpisodeIds) {
-                if (sessionEpisodeIds.isNotEmpty()) {
-                    sessionEpisodeIds.toList()
-                } else {
-                    savedEpisodes.value.take(3).map { it.id }
-                }
+                sessionEpisodeIds.toList()
             }
 
             val elapsedSec = ((System.currentTimeMillis() - sessionStartTimestamp) / 1000L)
                 .toInt()
-                .coerceIn(180, 7200)
-            val distMeters = currentLoc.totalWalkedMeters.coerceAtLeast(currentLoc.blocksExploredCount * 90)
+                .coerceAtLeast(1)
+            val distMeters = currentLoc.totalWalkedMeters
             val mapsUrl = "https://www.google.com/maps/dir/?api=1&travelmode=walking" +
                 "&origin=${firstPoint.latitude},${firstPoint.longitude}" +
                 "&destination=${lastPoint.latitude},${lastPoint.longitude}"
 
             val route = WalkRouteEntity(
                 routeTitle = customTitle?.takeIf { it.isNotBlank() }
-                    ?: "${currentLoc.streetBlockLabel} • ${lens.label} Walk",
+                    ?: "${currentLoc.streetBlockLabel} • ${localizedString(lens.labelRes)}",
                 neighborhoodName = currentLoc.neighborhoodName,
                 cityRegion = currentLoc.cityRegion,
                 startBlockLabel = firstPoint.label,
@@ -1869,6 +1946,22 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
             )
             repository.saveCompletedWalkRoute(route, linkedIds)
             sessionStartTimestamp = System.currentTimeMillis()
+            synchronized(sessionWaypoints) {
+                sessionWaypoints.clear()
+                if (currentLoc.hasLocationFix) {
+                    sessionWaypoints.add(
+                        RouteWaypoint(
+                            currentLoc.latitude,
+                            currentLoc.longitude,
+                            currentLoc.streetBlockLabel
+                        )
+                    )
+                }
+                _activeSessionWaypoints.value = sessionWaypoints.toList()
+            }
+            synchronized(sessionEpisodeIds) {
+                sessionEpisodeIds.clear()
+            }
             logAppEvent(
                 eventType = SmartEventType.WALK_TOUR_SAVED,
                 screenName = lastLoggedScreenRoute.ifBlank { "tour_summary" },
@@ -1910,6 +2003,10 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
      */
     fun prefetchNextBlockAlongHeading() {
         val currentLoc = locationState.value
+        if (!currentLoc.hasLocationFix) {
+            _lookaheadPrefetchState.value = LookaheadPrefetchState.Error(localizedString(R.string.error_no_gps_fix))
+            return
+        }
         val lens = _selectedLens.value
         val targetLat = currentLoc.predictedNextIntersectionLat
         val targetLng = currentLoc.predictedNextIntersectionLng
@@ -1938,10 +2035,9 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
             try {
                 val stats = _quotaStats.value
-                val byokKey = getSavedByokKey()
-                val usingByok = stats.selectedTier == AiUsageTier.BYOK_USER_KEY && byokKey != null
+                val activeByokKey = if (stats.selectedTier == AiUsageTier.BYOK_USER_KEY) getSavedByokKey() else null
                 val entity = if (stats.selectedTier == AiUsageTier.CACHE_FIRST_SAVER ||
-                    (!usingByok && stats.dailyApiCallsUsed >= stats.dailyApiCallBudget)
+                    (activeByokKey == null && stats.dailyApiCallsUsed >= stats.dailyApiCallBudget)
                 ) {
                     val lookaheadState = currentLoc.copy(
                         latitude = targetLat,
@@ -1952,6 +2048,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 } else {
                     val prompt = buildString {
                         appendLine("You are the host of 'WanderCast', a localized public radio walking documentary.")
+                        appendLine("Write all JSON string values in ${currentLanguageNameForPrompt()}.")
                         appendLine("The walker is currently heading ${currentLoc.headingCardinal} (${currentLoc.headingDegrees.roundToInt()}°) toward the upcoming intersection at:")
                         appendLine("- Upcoming Block Sector: $targetHint")
                         appendLine("- Neighborhood: ${currentLoc.neighborhoodName}")
@@ -1961,8 +2058,8 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                         appendLine("Return JSON with keys: episodeTitle, stationCallSign, hookLine, narrativeScript, fieldFacts (array of 3 strings), explorerPrompt, estimatedDurationSeconds (int).")
                     }
                     val jsonString = withTimeout(45_000L) {
-                        if (usingByok && byokKey != null) {
-                            callUserByokGeminiJson(byokKey, prompt)
+                        if (activeByokKey != null) {
+                            callUserByokGeminiJson(activeByokKey, prompt)
                         } else {
                             ecoDocumentaryModel.generateContent(prompt).text
                                 ?: throw IllegalStateException("Empty lookahead response.")
@@ -2036,185 +2133,29 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
-     * Seeds an initial completed historical walk route and 3 linked Room documentary episodes
-     * on first app installation so the Tour Summary screen and Field Tapes archive
-     * immediately display a rich multi-point neighborhood walk route from the Room database.
+     * Restores the most recent real user-recorded episode on relaunch (if any exist in Room)
+     * and initializes the 8 achievement definitions at 0 progress on a clean install.
      */
-    private fun seedInitialRoomTourIfEmpty() {
+    private fun restoreLatestEpisodeAndInitBadges() {
         viewModelScope.launch {
             try {
-                if (repository.countWalkRoutes() > 0) return@launch
-                val now = System.currentTimeMillis()
-                val ep1 = EpisodeEntity(
-                    title = "The Copper-Green Flatiron of Columbus & Kearny",
-                    stationCallSign = "91.5 FM • DESIGN",
-                    locationLabel = "Columbus Ave & Kearny St • North Beach / Jackson Square",
-                    latitude = 37.7955,
-                    longitude = -122.4029,
-                    category = DocumentaryLens.ARCHITECTURE.label,
-                    hookLine = "Look up at the oxidized green turret crowning the wedge-shaped Sentinel Building at the gateway to North Beach.",
-                    narrativeScript = "Constructed in 1907 just months after the Great San Francisco Earthquake, the seven-story Sentinel Building was designed by architects Salfield and Kohlberg to fit an acute triangular lot where Columbus Avenue slices diagonally across the Spanish grid. Its riveted steel frame and glazed terra-cotta bay windows survived corrupt political boss Abe Ruef, a speakeasy era under the Kingston Trio, and eventually became Francis Ford Coppola's American Zoetrope film headquarters.",
-                    fieldFactsJoined = listOf(
-                        "Built in 1907 on a diagonal cut where Columbus Ave (formerly Montgomery Ave) intersects Kearny St",
-                        "Originally planned by notorious city boss Abe Ruef before he was indicted during construction",
-                        "Houses the distinctive copper-patina cupola and Francis Ford Coppola's Zoetrope Cafe on the ground floor"
-                    ).joinToString("||"),
-                    explorerPrompt = "Stand at the southern tip of the triangle and trace the curved cast-iron and copper bay windows rising toward the green dome.",
-                    durationSeconds = 62,
-                    voicePersona = "Baritone Host",
-                    speechRate = 1.0f,
-                    aiModelUsed = "gemini-3.8-flash",
-                    wordCount = 148,
-                    playCount = 2,
-                    isBookmarked = true,
-                    timestamp = now - 1_500_000L
-                )
-
-                val ep2 = EpisodeEntity(
-                    title = "Buried Gold Rush Hulls Beneath Jackson Square",
-                    stationCallSign = "101.3 FM • ARCHIVE",
-                    locationLabel = "450 Jackson St & Montgomery • Jackson Square Historic District",
-                    latitude = 37.7964,
-                    longitude = -122.4036,
-                    category = DocumentaryLens.DEEP_HISTORY.label,
-                    hookLine = "Beneath the brick sidewalks under your shoes lies the original 1849 shoreline of Yerba Buena Cove.",
-                    narrativeScript = "As you walk along Jackson Street, you are actually walking over reclaimed harbor water. During the 1849 Gold Rush, hundreds of merchant vessels were abandoned in Yerba Buena Cove when their crews deserted for the Sierra foothills. Enterprising merchants sank the wooden ships in place as instant warehouses and landfill foundations. Look closely at the 1850s red-brick facades with tall iron fire shutters—these survived the 1906 inferno thanks to a barrel-by-barrel bucket brigade from the Hotaling Whiskey warehouse.",
-                    fieldFactsJoined = listOf(
-                        "In 1849, Montgomery Street was the water's edge of San Francisco Bay before landfill pushed the bay 6 blocks east",
-                        "The Hotaling Whiskey Warehouse at 451 Jackson St survived the 1906 earthquake and fire intact",
-                        "Heavy wrought-iron window shutters were closed during fires to prevent embers from igniting timber floors"
-                    ).joinToString("||"),
-                    explorerPrompt = "Inspect the thick riveted iron shutters and granite thresholds along the 400 block of Jackson Street.",
-                    durationSeconds = 64,
-                    voicePersona = "Night Archivist",
-                    speechRate = 1.0f,
-                    aiModelUsed = "gemini-3.8-flash",
-                    wordCount = 154,
-                    playCount = 1,
-                    isBookmarked = true,
-                    timestamp = now - 950_000L
-                )
-
-                val ep3 = EpisodeEntity(
-                    title = "Espresso Steam & Letterpress Type on Broadway Corridor",
-                    stationCallSign = "94.7 FM • CULTURE",
-                    locationLabel = "Columbus Ave & Broadway Crossing • North Beach",
-                    latitude = 37.7975,
-                    longitude = -122.4051,
-                    category = DocumentaryLens.LOCAL_TRIVIA.label,
-                    hookLine = "At this diagonal crossing, post-war Italian roasters, Beat poets, and neon sign benders shared the same counter stools.",
-                    narrativeScript = "By the mid-1950s, this stretch of Columbus Avenue had become a living radio broadcast of its own. Inside Caffe Trieste and City Lights just steps from this intersection, Lawrence Ferlinghetti printed pocket paperback poetry while vintage Victoria Arduinolever espresso machines hissed across marble counters. Even the typography painted on the transom glass above the corner bakeries tells the story of multi-generational family storefronts.",
-                    fieldFactsJoined = listOf(
-                        "Home to the first paperbound bookshop in the United States dedicated to independent literature (1953)",
-                        "West Coast espresso house culture was pioneered on these four blocks in the 1950s",
-                        "Neon tube signage along the Broadway junction preserves mid-century hand-blown glass lettering"
-                    ).joinToString("||"),
-                    explorerPrompt = "Notice the hand-lettered gold leaf address numerals on the transom windows above the corner cafe doors.",
-                    durationSeconds = 58,
-                    voicePersona = "Field Reporter",
-                    speechRate = 1.0f,
-                    aiModelUsed = "gemini-3.5-flash-lite",
-                    wordCount = 142,
-                    playCount = 1,
-                    isBookmarked = false,
-                    timestamp = now - 420_000L
-                )
-
-                val id1 = repository.insertEpisode(ep1)
-                val id2 = repository.insertEpisode(ep2)
-                val id3 = repository.insertEpisode(ep3)
-
-                val seedWaypoints = listOf(
-                    RouteWaypoint(37.7955, -122.4029, "Columbus Ave & Kearny (Sentinel Flatiron)"),
-                    RouteWaypoint(37.7959, -122.4032, "Pacific Ave & Columbus Corner"),
-                    RouteWaypoint(37.7964, -122.4036, "450 Jackson St Brick Warehouse Row"),
-                    RouteWaypoint(37.7970, -122.4044, "Adler Museum & Saroyan Alley"),
-                    RouteWaypoint(37.7975, -122.4051, "Columbus Ave & Broadway Crossing")
-                )
-
-                val seedRoute = WalkRouteEntity(
-                    routeTitle = "Jackson Square & Sentinel Copper Walk",
-                    neighborhoodName = "Jackson Square / North Beach",
-                    cityRegion = "San Francisco, CA",
-                    startBlockLabel = "Columbus Ave & Kearny St",
-                    endBlockLabel = "Columbus Ave & Broadway Crossing",
-                    startLatitude = 37.7955,
-                    startLongitude = -122.4029,
-                    endLatitude = 37.7975,
-                    endLongitude = -122.4051,
-                    waypointsEncoded = WalkRouteEntity.encodeWaypoints(seedWaypoints),
-                    totalDistanceMeters = 480,
-                    durationSeconds = 1140,
-                    blocksVisitedCount = 5,
-                    narrativesGeneratedCount = 3,
-                    editorialLens = DocumentaryLens.ALL_ROUNDER.label,
-                    googleMapsUrl = "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=37.7955,-122.4029&destination=37.7975,-122.4051&waypoints=37.7964,-122.4036",
-                    isFavorite = true,
-                    startedAtTimestamp = now - 1_560_000L,
-                    completedAtTimestamp = now - 420_000L
-                )
-
-                repository.saveCompletedWalkRoute(seedRoute, listOf(id1, id2, id3))
-                if (_activeEpisode.value == null) {
-                    _activeEpisode.value = ep1.copy(id = id1)
+                seedInitialWalkBadgesIfEmpty()
+                savedEpisodes.collect { list ->
+                    if (_activeEpisode.value == null && list.isNotEmpty()) {
+                        _activeEpisode.value = list.first()
+                    }
                 }
-                seedInitialWalkBadgesIfEmpty(now)
-                seedInitialAppEventsIfEmpty(now)
             } catch (e: Exception) {
-                Log.w(TAG, "Unable to seed initial walk route: ${e.message}")
+                Log.w(TAG, "Unable to initialize local Room state: ${e.message}")
             }
         }
     }
 
-    private suspend fun seedInitialAppEventsIfEmpty(now: Long = System.currentTimeMillis()) {
-        if (repository.countAppEvents() > 0) return
-        val seededEvents = listOf(
-            AppEventEntity(
-                eventType = SmartEventType.DOCUMENTARY_GENERATED.key,
-                eventCategory = SmartEventType.DOCUMENTARY_GENERATED.category,
-                screenName = "live_broadcast",
-                metadataSummary = "Generated 'The Copper-Green Flatiron of Columbus & Kearny' (Architecture & Design)",
-                delightScoreDelta = 18,
-                sessionNumber = 1,
-                timestamp = now - 1_450_000L
-            ),
-            AppEventEntity(
-                eventType = SmartEventType.EPISODE_BOOKMARKED.key,
-                eventCategory = SmartEventType.EPISODE_BOOKMARKED.category,
-                screenName = "field_tapes",
-                metadataSummary = "Bookmarked 'Buried Gold Rush Hulls Beneath Jackson Square'",
-                delightScoreDelta = 18,
-                sessionNumber = 1,
-                timestamp = now - 920_000L
-            ),
-            AppEventEntity(
-                eventType = SmartEventType.WALK_TOUR_SAVED.key,
-                eventCategory = SmartEventType.WALK_TOUR_SAVED.category,
-                screenName = "tour_summary",
-                metadataSummary = "Completed & archived 'Jackson Square & Sentinel Copper Walk' (480m • 3 narratives)",
-                delightScoreDelta = 32,
-                sessionNumber = 1,
-                timestamp = now - 420_000L
-            ),
-            AppEventEntity(
-                eventType = SmartEventType.BADGE_UNLOCKED.key,
-                eventCategory = SmartEventType.BADGE_UNLOCKED.category,
-                screenName = "walk_rewards",
-                metadataSummary = "Unlocked 'First 99.1 FM Transmission' & 'Street Facade Critic' badges (+350 XP)",
-                delightScoreDelta = 38,
-                sessionNumber = 1,
-                timestamp = now - 400_000L
-            )
-        )
-        seededEvents.forEach { repository.insertAppEvent(it) }
-    }
-
     /**
-     * Seeds the 8 digital badges into the Room `walk_badges` table on first install.
-     * Pre-unlocks 3 badges earned from the seeded Jackson Square & Sentinel Copper Walk tour
-     * while keeping 5 badges (including 'Early Bird' and 'Marathoner') ready to unlock.
+     * Registers the 8 digital badge achievement definitions in the Room `walk_badges` table on
+     * first install. All badges start cleanly at 0 progress and locked until earned by real walks.
      */
-    private suspend fun seedInitialWalkBadgesIfEmpty(now: Long = System.currentTimeMillis()) {
+    private suspend fun seedInitialWalkBadgesIfEmpty() {
         if (repository.countWalkBadges() > 0) return
         val initialBadges = listOf(
             WalkBadgeEntity(
@@ -2222,12 +2163,12 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 category = "TOUR_MILESTONE",
                 iconType = "RADIO_TOWER",
                 xpReward = 150,
-                currentProgress = 1,
+                currentProgress = 0,
                 targetProgress = 1,
                 progressUnit = "tours",
-                isUnlocked = true,
-                unlockedAtTimestamp = now - 420_000L,
-                unlockedTourTitle = "Jackson Square & Sentinel Copper Walk",
+                isUnlocked = false,
+                unlockedAtTimestamp = null,
+                unlockedTourTitle = null,
                 sortOrder = 1
             ),
             WalkBadgeEntity(
@@ -2248,7 +2189,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 category = "ENDURANCE",
                 iconType = "MARATHON_SHOE",
                 xpReward = 400,
-                currentProgress = 480,
+                currentProgress = 0,
                 targetProgress = 1500,
                 progressUnit = "meters",
                 isUnlocked = false,
@@ -2261,12 +2202,12 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 category = "HISTORIANS_LENS",
                 iconType = "ARCH_COLUMN",
                 xpReward = 200,
-                currentProgress = 3,
+                currentProgress = 0,
                 targetProgress = 3,
                 progressUnit = "dispatches",
-                isUnlocked = true,
-                unlockedAtTimestamp = now - 400_000L,
-                unlockedTourTitle = "The Copper-Green Flatiron of Columbus & Kearny",
+                isUnlocked = false,
+                unlockedAtTimestamp = null,
+                unlockedTourTitle = null,
                 sortOrder = 4
             ),
             WalkBadgeEntity(
@@ -2274,7 +2215,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 category = "GEOFENCE_EXPLORER",
                 iconType = "RADAR_COMPASS",
                 xpReward = 300,
-                currentProgress = 1,
+                currentProgress = 0,
                 targetProgress = 3,
                 progressUnit = "checkpoints",
                 isUnlocked = false,
@@ -2287,7 +2228,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 category = "TOUR_MILESTONE",
                 iconType = "ARCHIVE_SCROLL",
                 xpReward = 350,
-                currentProgress = 1,
+                currentProgress = 0,
                 targetProgress = 3,
                 progressUnit = "tours",
                 isUnlocked = false,
@@ -2300,12 +2241,12 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 category = "TIME_OF_DAY",
                 iconType = "CRESCENT_MOON",
                 xpReward = 225,
-                currentProgress = 1,
+                currentProgress = 0,
                 targetProgress = 1,
                 progressUnit = "night_walks",
-                isUnlocked = true,
-                unlockedAtTimestamp = now - 950_000L,
-                unlockedTourTitle = "Buried Gold Rush Hulls Beneath Jackson Square",
+                isUnlocked = false,
+                unlockedAtTimestamp = null,
+                unlockedTourTitle = null,
                 sortOrder = 7
             ),
             WalkBadgeEntity(
@@ -2365,11 +2306,11 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                 val loc = locationState.value
                 val now = System.currentTimeMillis()
 
-                val totalCompletedTours = routes.size.coerceAtLeast(1)
+                val totalCompletedTours = routes.size
                 val totalWalkedMeters = routes.sumOf { it.route.totalDistanceMeters } +
                     loc.totalWalkedMeters
                 val totalDispatches = episodes.size
-                val visitedGeofenceCount = visitedIds.size.coerceAtLeast(1)
+                val visitedGeofenceCount = visitedIds.size
 
                 val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                 val isMorningHour = currentHour in 5..10
@@ -2380,7 +2321,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
 
                 val latestTourName = triggeringTourTitle
                     ?: routes.firstOrNull()?.route?.routeTitle
-                    ?: loc.streetBlockLabel
+                    ?: loc.streetBlockLabel.takeIf { it.isNotBlank() }
 
                 var newlyUnlockedId: String? = null
 
@@ -2411,7 +2352,7 @@ class WanderCastViewModel(application: Application) : AndroidViewModel(applicati
                             prog to (prog >= badge.targetProgress)
                         }
                         "night_owl" -> {
-                            val prog = if (badge.isUnlocked || isEveningHour || hasNightArchivistEpisode) 1 else badge.currentProgress
+                            val prog = if (badge.isUnlocked || (isEveningHour && totalCompletedTours >= 1) || hasNightArchivistEpisode) 1 else badge.currentProgress
                             prog to (prog >= badge.targetProgress)
                         }
                         "trivia_virtuoso" -> {

@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.audio.NarratorState
@@ -174,49 +175,7 @@ fun OnAirStudioScreen(
                 }
             }
 
-            // 2b. Foreground LocationService Background Walk Card
-            item {
-                val remaining = (locationState.triggerThresholdMeters - locationState.distanceFromLastBroadcastMeters).coerceAtLeast(0)
-                ForegroundLocationServiceCard(
-                    isForegroundServiceActive = locationState.isForegroundServiceActive,
-                    streetBlockLabel = locationState.streetBlockLabel,
-                    remainingMetersToTrigger = remaining,
-                    onToggleForegroundService = onToggleForegroundService
-                )
-            }
-
-            // 2b-2. Adaptive Low-Battery (<20%) GPS Polling & Map Tile Refresh Rate Saver Card
-            item {
-                BatteryPowerSaverCard(
-                    batteryProfile = batteryPowerProfile,
-                    onSelectOverrideMode = onSelectBatteryOverrideMode,
-                    onSimulateLowBattery = onSimulateLowBattery
-                )
-            }
-
-            // 2c. Smart Zero-Developer-Cost Quota & Spatial Block Cache Engine
-            item {
-                SmartQuotaAndSpatialCacheCard(
-                    quotaStats = quotaStats,
-                    onSelectTier = onSelectUsageTier,
-                    onToggleSpatialCache = onToggleSpatialCache,
-                    onChangeDailyBudget = onChangeDailyBudget,
-                    onSaveByokKey = onSaveByokKey,
-                    onClearByokKey = onClearByokKey
-                )
-            }
-
-            // 2d. High-Value Heading Vector 95m Lookahead Pre-Fetch Buffer (0ms Latency Cache Warming)
-            item {
-                LookaheadHeadingBufferCard(
-                    locationState = locationState,
-                    lookaheadState = lookaheadState,
-                    onPrefetchNextBlock = onPrefetchNextBlock,
-                    onPlayPrefetchedEpisode = onPlayPrefetchedEpisode
-                )
-            }
-
-            // 3. Primary Walk & Broadcast Action Row
+            // 3. Primary Walk & Broadcast Action Row (immediately accessible above the fold)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -225,10 +184,11 @@ fun OnAirStudioScreen(
                     Button(
                         onClick = onBroadcastCurrentBlock,
                         modifier = Modifier
-                            .weight(1.15f)
+                            .weight(1.08f)
                             .height(52.dp)
                             .testTag("broadcast_block_button"),
                         shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -236,33 +196,40 @@ fun OnAirStudioScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CellTower,
-                            contentDescription = "Broadcast Block",
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = stringResource(R.string.cd_broadcast_block),
+                            modifier = Modifier.size(17.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.generate_episode_btn),
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     FilledTonalButton(
                         onClick = onWalkOneBlockForward,
                         modifier = Modifier
-                            .weight(0.95f)
+                            .weight(1.0f)
                             .height(52.dp)
                             .testTag("step_forward_block_button"),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
-                            contentDescription = "Walk 1 Block",
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = stringResource(R.string.cd_walk_one_block),
+                            modifier = Modifier.size(17.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = stringResource(R.string.step_forward_btn),
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -322,6 +289,7 @@ fun OnAirStudioScreen(
                             )
                         } else {
                             ReadyToBroadcastOnboardingCard(
+                                hasLocationFix = locationState.hasLocationFix,
                                 blockLabel = locationState.streetBlockLabel,
                                 neighborhoodLabel = locationState.neighborhoodName,
                                 onStartBroadcast = onBroadcastCurrentBlock
@@ -331,7 +299,7 @@ fun OnAirStudioScreen(
                 }
             }
 
-            // 7. AI 3-Stop Walking Route Planner + Google Maps Deep-Link
+            // 7. Interactive Studio Tools: Route Planner, Facade Scanner, Trivia, Host Q&A
             item {
                 WalkingRoutePlannerCard(
                     routeState = walkingRouteState,
@@ -339,7 +307,6 @@ fun OnAirStudioScreen(
                 )
             }
 
-            // 8. Multimodal Facade & Historical Plaque Scanner (Zero-Permission Photo Picker)
             item {
                 ArchitectureVisionScannerCard(
                     visionState = visionScannerState,
@@ -347,7 +314,6 @@ fun OnAirStudioScreen(
                 )
             }
 
-            // 8b. Interactive Street Trivia & Time-Travel Challenge (AI + 0-Token Room DB Archive)
             item {
                 UrbanTriviaChallengeCard(
                     triviaState = urbanTriviaState,
@@ -357,7 +323,6 @@ fun OnAirStudioScreen(
                 )
             }
 
-            // 9. Interactive "Ask the Radio Host" Live Streaming Field Q&A
             item {
                 LiveFieldQaCard(
                     questionInput = followUpQuestion,
@@ -367,6 +332,45 @@ fun OnAirStudioScreen(
                         onAskHostQuestion(q)
                         followUpQuestion = ""
                     }
+                )
+            }
+
+            // 8. Field Broadcast Console: Background Walk Service, Heading Buffer, Quota & Battery
+            item {
+                val remaining = (locationState.triggerThresholdMeters - locationState.distanceFromLastBroadcastMeters).coerceAtLeast(0)
+                ForegroundLocationServiceCard(
+                    isForegroundServiceActive = locationState.isForegroundServiceActive,
+                    streetBlockLabel = locationState.streetBlockLabel,
+                    remainingMetersToTrigger = remaining,
+                    onToggleForegroundService = onToggleForegroundService
+                )
+            }
+
+            item {
+                LookaheadHeadingBufferCard(
+                    locationState = locationState,
+                    lookaheadState = lookaheadState,
+                    onPrefetchNextBlock = onPrefetchNextBlock,
+                    onPlayPrefetchedEpisode = onPlayPrefetchedEpisode
+                )
+            }
+
+            item {
+                SmartQuotaAndSpatialCacheCard(
+                    quotaStats = quotaStats,
+                    onSelectTier = onSelectUsageTier,
+                    onToggleSpatialCache = onToggleSpatialCache,
+                    onChangeDailyBudget = onChangeDailyBudget,
+                    onSaveByokKey = onSaveByokKey,
+                    onClearByokKey = onClearByokKey
+                )
+            }
+
+            item {
+                BatteryPowerSaverCard(
+                    batteryProfile = batteryPowerProfile,
+                    onSelectOverrideMode = onSelectBatteryOverrideMode,
+                    onSimulateLowBattery = onSimulateLowBattery
                 )
             }
 
@@ -402,7 +406,7 @@ private fun GpsPermissionPromptCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.MyLocation,
-                    contentDescription = "GPS Receiver",
+                    contentDescription = stringResource(R.string.cd_gps_receiver),
                     tint = MaterialTheme.colorScheme.secondary
                 )
                 Text(
@@ -478,7 +482,7 @@ private fun GeneratingDocumentaryCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "60s '$lensLabel' • Gemini AI",
+                text = stringResource(R.string.generating_lens_meta, lensLabel),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -546,10 +550,13 @@ private fun EpisodeErrorCard(
 
 @Composable
 private fun ReadyToBroadcastOnboardingCard(
+    hasLocationFix: Boolean,
     blockLabel: String,
     neighborhoodLabel: String,
     onStartBroadcast: () -> Unit
 ) {
+    val displayBlock = blockLabel.ifBlank { stringResource(R.string.waiting_for_gps_block) }
+    val displayNeighborhood = neighborhoodLabel.ifBlank { stringResource(R.string.waiting_for_gps_neighborhood) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -575,20 +582,24 @@ private fun ReadyToBroadcastOnboardingCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = stringResource(R.string.onboarding_ready_badge),
+                    text = if (hasLocationFix) {
+                        stringResource(R.string.onboarding_ready_badge)
+                    } else {
+                        stringResource(R.string.onboarding_waiting_badge)
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = blockLabel,
+                text = displayBlock,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "$neighborhoodLabel • ${stringResource(R.string.splash_subtitle)}",
+                text = "$displayNeighborhood • ${stringResource(R.string.splash_subtitle)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -660,7 +671,11 @@ fun EpisodeDocumentaryCard(
                 ) {
                     Icon(
                         imageVector = if (episode.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = if (episode.isBookmarked) "Remove Bookmark" else "Bookmark Episode",
+                        contentDescription = if (episode.isBookmarked) {
+                            stringResource(R.string.cd_bookmark_remove)
+                        } else {
+                            stringResource(R.string.cd_bookmark_add)
+                        },
                         tint = if (episode.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -822,9 +837,9 @@ private fun LiveFieldQaCard(
     onSubmitQuestion: (String) -> Unit
 ) {
     val quickPrompts = listOf(
-        "What stood here 100 years ago?",
-        "Explain the architecture on this block",
-        "Any quirky local diner or street lore?"
+        stringResource(R.string.qa_quick_prompt_1),
+        stringResource(R.string.qa_quick_prompt_2),
+        stringResource(R.string.qa_quick_prompt_3)
     )
 
     Card(
@@ -925,14 +940,14 @@ private fun LiveFieldQaCard(
                     },
                     enabled = questionInput.isNotBlank(),
                     shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
+                    contentPadding = PaddingValues(0.dp),
                     modifier = Modifier
-                        .height(52.dp)
+                        .size(52.dp)
                         .testTag("ask_host_send_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send Question"
+                        contentDescription = stringResource(R.string.cd_send_question)
                     )
                 }
             }
@@ -961,7 +976,7 @@ private fun LiveFieldQaCard(
                                             strokeWidth = 2.dp
                                         )
                                         Text(
-                                            text = "Host is researching \"${qaState.question}\"…",
+                                            text = stringResource(R.string.qa_loading_format, qaState.question),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -970,7 +985,7 @@ private fun LiveFieldQaCard(
 
                                 is LiveHostQaState.Streaming -> {
                                     Text(
-                                        text = "ON-AIR REPLY • STREAMING",
+                                        text = stringResource(R.string.qa_streaming_header),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -984,7 +999,7 @@ private fun LiveFieldQaCard(
 
                                 is LiveHostQaState.Success -> {
                                     Text(
-                                        text = "HOST FIELD DISPATCH • \"${qaState.question}\"",
+                                        text = stringResource(R.string.qa_dispatch_header, qaState.question),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )

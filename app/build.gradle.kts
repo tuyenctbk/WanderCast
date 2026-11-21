@@ -1,4 +1,17 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+
+val localProps = Properties().apply {
+  val localFile = rootProject.file("local.properties")
+  if (localFile.exists()) {
+    localFile.inputStream().use { load(it) }
+  }
+}
+
+fun readSigningSecret(propKey: String, envKey: String): String? {
+  return localProps.getProperty(propKey)?.takeIf { it.isNotBlank() }
+    ?: System.getenv(envKey)?.takeIf { it.isNotBlank() }
+}
 
 plugins {
   alias(libs.plugins.android.application)
@@ -13,30 +26,32 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.wandercast.kxmpzq"
+    applicationId = "com.soloprono.wandercast"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 2
+    versionName = "1.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
-  // Do not remove or modify these signingConfigs. They are necessary for building, installing,
-  // and updating Android apps in AI Studio.
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      val storeFileName = readSigningSecret("RELEASE_STORE_FILE", "KEYSTORE_PATH")
+        ?: "common_release_key.jks"
+      storeFile = rootProject.file(storeFileName)
+      storePassword = readSigningSecret("RELEASE_STORE_PASSWORD", "STORE_PASSWORD")
+      keyAlias = readSigningSecret("RELEASE_KEY_ALIAS", "KEY_ALIAS") ?: "dpad_hero_alias"
+      keyPassword = readSigningSecret("RELEASE_KEY_PASSWORD", "KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+    val customDebugKeystore = rootProject.file("debug.keystore")
+    if (customDebugKeystore.exists()) {
+      create("debugConfig") {
+        storeFile = customDebugKeystore
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
     }
   }
 
@@ -45,14 +60,13 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio.
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio.
-      signingConfig = signingConfigs.getByName("debugConfig")
+      val customDebug = signingConfigs.findByName("debugConfig")
+      if (customDebug != null) {
+        signingConfig = customDebug
+      }
     }
   }
   compileOptions {

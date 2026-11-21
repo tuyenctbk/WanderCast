@@ -29,12 +29,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -77,6 +77,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.EpisodeEntity
@@ -154,10 +155,11 @@ fun FieldTapesArchiveScreen(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
+                                modifier = Modifier.weight(1f),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -169,7 +171,9 @@ fun FieldTapesArchiveScreen(
                                 Text(
                                     text = stringResource(R.string.archive_header_badge),
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
 
@@ -184,10 +188,12 @@ fun FieldTapesArchiveScreen(
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = stringResource(R.string.archive_save_walk_btn),
-                                    style = MaterialTheme.typography.labelMedium
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -234,7 +240,12 @@ fun FieldTapesArchiveScreen(
                                 selected = selectedSectionTab == 0,
                                 onClick = { selectedSectionTab = 0 },
                                 label = {
-                                    Text("${stringResource(R.string.rewards_stat_tours)} (${completedWalkRoutes.size})")
+                                    Text(
+                                        text = stringResource(R.string.archive_tab_walks, completedWalkRoutes.size),
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 },
                                 leadingIcon = {
                                     Icon(
@@ -252,7 +263,12 @@ fun FieldTapesArchiveScreen(
                                 selected = selectedSectionTab == 1,
                                 onClick = { selectedSectionTab = 1 },
                                 label = {
-                                    Text("${stringResource(R.string.nav_archive)} (${episodes.size})")
+                                    Text(
+                                        text = stringResource(R.string.archive_tab_tapes, episodes.size),
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 },
                                 leadingIcon = {
                                     Icon(
@@ -278,13 +294,12 @@ fun FieldTapesArchiveScreen(
                                 selected = !onlyBookmarked,
                                 onClick = { onlyBookmarked = false },
                                 label = {
-                                    Text(
-                                        if (selectedSectionTab == 0) {
-                                            "${stringResource(R.string.rewards_stat_tours)} (${completedWalkRoutes.size})"
-                                        } else {
-                                            "${stringResource(R.string.nav_archive)} (${episodes.size})"
-                                        }
-                                    )
+                                    val count = if (selectedSectionTab == 0) {
+                                        completedWalkRoutes.size
+                                    } else {
+                                        episodes.size
+                                    }
+                                    Text(stringResource(R.string.archive_filter_all, count))
                                 },
                                 modifier = Modifier.testTag("filter_all_tapes_chip")
                             )
@@ -297,7 +312,7 @@ fun FieldTapesArchiveScreen(
                                     } else {
                                         episodes.count { it.isBookmarked }
                                     }
-                                    Text("★ ($count)")
+                                    Text(stringResource(R.string.archive_filter_saved, count))
                                 },
                                 leadingIcon = {
                                     Icon(
@@ -379,7 +394,7 @@ private fun CompletedWalkRouteCard(
     var expanded by rememberSaveable { mutableStateOf(true) }
 
     val formattedDate = remember(route.completedAtTimestamp) {
-        SimpleDateFormat("MMM d • h:mm a", Locale.US).format(Date(route.completedAtTimestamp))
+        SimpleDateFormat("MMM d • h:mm a", Locale.getDefault()).format(Date(route.completedAtTimestamp))
     }
     val durationMinutes = remember(route.durationSeconds) {
         (route.durationSeconds.coerceAtLeast(60) / 60)
@@ -427,7 +442,7 @@ private fun CompletedWalkRouteCard(
                     ) {
                         Icon(
                             imageVector = if (route.isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Favorite Walk Route",
+                            contentDescription = stringResource(R.string.cd_favorite_route),
                             tint = if (route.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -439,7 +454,7 @@ private fun CompletedWalkRouteCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Delete Walk Route",
+                            contentDescription = stringResource(R.string.cd_delete_route),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -479,19 +494,19 @@ private fun CompletedWalkRouteCard(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 MetadataBadge(
-                    label = "${route.totalDistanceMeters}m walked"
+                    label = stringResource(R.string.tour_telemetry_walked, route.totalDistanceMeters)
                 )
                 MetadataBadge(
-                    label = "${durationMinutes}m duration"
+                    label = stringResource(R.string.tour_telemetry_duration, durationMinutes)
                 )
                 MetadataBadge(
-                    label = "${route.blocksVisitedCount} blocks visited"
+                    label = stringResource(R.string.archive_meta_blocks, route.blocksVisitedCount)
                 )
                 MetadataBadge(
-                    label = "${narratives.size} audio narratives"
+                    label = stringResource(R.string.archive_meta_narratives, narratives.size)
                 )
                 MetadataBadge(
-                    label = "${route.waypoints.size} GPS waypoints"
+                    label = stringResource(R.string.archive_meta_waypoints, route.waypoints.size)
                 )
             }
 
@@ -522,7 +537,7 @@ private fun CompletedWalkRouteCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Retrace Walk in Maps")
+                    Text(stringResource(R.string.archive_retrace_maps_btn))
                 }
 
                 IconButton(
@@ -533,7 +548,11 @@ private fun CompletedWalkRouteCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "Hide route narratives" else "Show route narratives"
+                        contentDescription = if (expanded) {
+                            stringResource(R.string.cd_hide_narratives)
+                        } else {
+                            stringResource(R.string.cd_show_narratives)
+                        }
                     )
                 }
             }
@@ -547,7 +566,7 @@ private fun CompletedWalkRouteCard(
                 ) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Text(
-                        text = "AUDIO NARRATIVES TRIGGERED ON THIS WALK (${narratives.size})",
+                        text = stringResource(R.string.archive_walk_narratives_header, narratives.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 4.dp)
@@ -583,24 +602,32 @@ private fun CompletedWalkRouteCard(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "${episode.voicePersona} • ${episode.speechRate}x • ${episode.wordCount} words • ${episode.durationSeconds}s",
+                                        text = "${episode.voicePersona} • ${stringResource(R.string.archive_meta_words_dur, episode.wordCount, episode.durationSeconds)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 FilledTonalButton(
                                     onClick = { onReplayEpisode(episode) },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                                     shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.testTag("route_episode_replay_${episode.id}")
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .testTag("route_episode_replay_${episode.id}")
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Replay Narrative",
+                                        contentDescription = stringResource(R.string.cd_replay_narrative),
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Play", style = MaterialTheme.typography.labelMedium)
+                                    Text(
+                                        text = stringResource(R.string.archive_play_btn),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
                                 }
                             }
                         }
@@ -661,9 +688,10 @@ private fun MiniWalkRouteCanvasMap(
             val lngSpan = (maxLng - minLng).coerceAtLeast(0.0005)
 
             val padX = w * 0.14f
-            val padY = h * 0.22f
+            val padTop = h * 0.18f
+            val padBottom = h * 0.36f
             val usableW = (w - padX * 2).coerceAtLeast(10f)
-            val usableH = (h - padY * 2).coerceAtLeast(10f)
+            val usableH = (h - padTop - padBottom).coerceAtLeast(10f)
 
             val points = waypoints.mapIndexed { index, wp ->
                 val normX = if (waypoints.size == 1) 0.5f else ((wp.longitude - minLng) / lngSpan).toFloat()
@@ -676,7 +704,7 @@ private fun MiniWalkRouteCanvasMap(
                 }
                 Offset(
                     x = padX + spreadX * usableW,
-                    y = padY + normY * usableH
+                    y = padTop + normY * usableH
                 )
             }
 
@@ -723,7 +751,7 @@ private fun MiniWalkRouteCanvasMap(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.DirectionsWalk,
+                imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(14.dp)
@@ -732,10 +760,12 @@ private fun MiniWalkRouteCanvasMap(
                 text = if (waypoints.isNotEmpty()) {
                     "${waypoints.first().label} → ${waypoints.last().label}"
                 } else {
-                    "GPS Breadcrumb Trail"
+                    stringResource(R.string.archive_gps_breadcrumb)
                 },
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -788,9 +818,9 @@ private fun EmptyArchiveCard(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = when {
-                    onlyBookmarked && isRouteTab -> "No Bookmarked Walk Routes Yet"
-                    onlyBookmarked -> "No Bookmarked Field Tapes Yet"
-                    isRouteTab -> "No Completed Walk Routes Logged Yet"
+                    onlyBookmarked && isRouteTab -> stringResource(R.string.archive_empty_fav_routes_title)
+                    onlyBookmarked -> stringResource(R.string.archive_empty_fav_tapes_title)
+                    isRouteTab -> stringResource(R.string.archive_empty_routes_title)
                     else -> stringResource(R.string.empty_archive_title)
                 },
                 style = MaterialTheme.typography.titleLarge,
@@ -800,8 +830,8 @@ private fun EmptyArchiveCard(
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = when {
-                    onlyBookmarked -> "Tap the bookmark icon on any walk route or audio documentary to save it to your favorites."
-                    isRouteTab -> "Tap 'Save Current Walk' above or generate a 3-Stop Walking Route in the On-Air Studio to archive your GPS route and linked audio dispatches."
+                    onlyBookmarked -> stringResource(R.string.archive_empty_fav_subtitle)
+                    isRouteTab -> stringResource(R.string.archive_empty_routes_subtitle)
                     else -> stringResource(R.string.empty_archive_subtitle)
                 },
                 style = MaterialTheme.typography.bodyMedium,
@@ -817,9 +847,9 @@ private fun EmptyArchiveCard(
                 ) {
                     Text(
                         if (isRouteTab) {
-                            "Log Current Walk Session Now"
+                            stringResource(R.string.archive_log_walk_cta)
                         } else {
-                            "Return to On-Air Studio & Broadcast"
+                            stringResource(R.string.archive_return_studio_cta)
                         }
                     )
                 }
@@ -839,7 +869,7 @@ private fun ArchivedEpisodeCard(
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val formattedDate = remember(episode.timestamp) {
-        SimpleDateFormat("MMM d • h:mm a", Locale.US).format(Date(episode.timestamp))
+        SimpleDateFormat("MMM d • h:mm a", Locale.getDefault()).format(Date(episode.timestamp))
     }
 
     Card(
@@ -887,7 +917,11 @@ private fun ArchivedEpisodeCard(
                     ) {
                         Icon(
                             imageVector = if (episode.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Bookmark",
+                            contentDescription = if (episode.isBookmarked) {
+                                stringResource(R.string.cd_bookmark_remove)
+                            } else {
+                                stringResource(R.string.cd_bookmark_add)
+                            },
                             tint = if (episode.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -899,7 +933,7 @@ private fun ArchivedEpisodeCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Delete Episode",
+                            contentDescription = stringResource(R.string.cd_delete_episode),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -927,11 +961,11 @@ private fun ArchivedEpisodeCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                MetadataBadge(label = "Voice: ${episode.voicePersona}")
-                MetadataBadge(label = "${episode.speechRate}x Speed")
-                MetadataBadge(label = "${episode.wordCount} words • ${episode.durationSeconds}s")
-                MetadataBadge(label = "Model: ${episode.aiModelUsed}")
-                MetadataBadge(label = "Plays: ${episode.playCount}")
+                MetadataBadge(label = stringResource(R.string.archive_meta_voice, episode.voicePersona))
+                MetadataBadge(label = stringResource(R.string.archive_meta_speed, episode.speechRate))
+                MetadataBadge(label = stringResource(R.string.archive_meta_words_dur, episode.wordCount, episode.durationSeconds))
+                MetadataBadge(label = stringResource(R.string.archive_meta_model, episode.aiModelUsed))
+                MetadataBadge(label = stringResource(R.string.archive_meta_plays, episode.playCount))
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -995,7 +1029,11 @@ private fun ArchivedEpisodeCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "Collapse transcript" else "Expand transcript"
+                        contentDescription = if (expanded) {
+                            stringResource(R.string.cd_collapse_transcript)
+                        } else {
+                            stringResource(R.string.cd_expand_transcript)
+                        }
                     )
                 }
             }

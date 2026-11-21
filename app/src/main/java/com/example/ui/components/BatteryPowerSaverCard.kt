@@ -1,7 +1,12 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +23,8 @@ import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.BatteryStd
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.Card
@@ -25,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -32,12 +40,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.location.BatteryPowerProfileState
@@ -55,6 +67,7 @@ fun BatteryPowerSaverCard(
 ) {
     val isSaver = batteryProfile.isBatterySaverActive
     val effectivePct = batteryProfile.effectiveBatteryPercentage
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     val accentColor by animateColorAsState(
         targetValue = when {
@@ -76,6 +89,7 @@ fun BatteryPowerSaverCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
             .testTag("battery_power_saver_card"),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
@@ -89,10 +103,12 @@ fun BatteryPowerSaverCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Top Status Row
+            // Top Status Row (tap to expand controls)
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
@@ -106,32 +122,82 @@ fun BatteryPowerSaverCard(
                         tint = accentColor,
                         modifier = Modifier.size(20.dp)
                     )
-                    Text(
-                        text = stringResource(R.string.battery_saver_card_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = accentColor,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.battery_saver_card_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val mapThrottleLabel = if (batteryProfile.mapTileRefreshThrottleMs > 0L) {
+                            stringResource(
+                                R.string.battery_map_eco_short_format,
+                                (batteryProfile.mapTileRefreshThrottleMs / 1000).toInt()
+                            )
+                        } else {
+                            stringResource(R.string.battery_map_realtime_value)
+                        }
+                        Text(
+                            text = stringResource(
+                                R.string.battery_gps_map_summary_format,
+                                (batteryProfile.gpsPollingIntervalMs / 1000).toInt(),
+                                mapThrottleLabel
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
-                Surface(
-                    color = accentColor.copy(alpha = 0.16f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = if (isSaver) {
-                            "${effectivePct}% • ${stringResource(R.string.battery_saver_active_badge)}"
-                        } else {
-                            "${effectivePct}% • ${stringResource(R.string.battery_saver_normal_badge)}"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = accentColor,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
+                    Surface(
+                        color = accentColor.copy(alpha = 0.16f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = if (isSaver) {
+                                stringResource(R.string.battery_pill_eco_format, effectivePct)
+                            } else {
+                                stringResource(R.string.battery_pill_full_format, effectivePct)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accentColor,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("expand_battery_card_button")
+                    ) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (expanded) {
+                                stringResource(R.string.cd_battery_collapse)
+                            } else {
+                                stringResource(R.string.cd_battery_expand)
+                            },
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
+
+            AnimatedVisibility(visible = expanded || isSaver) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
             // Battery Progress Bar
             LinearProgressIndicator(
@@ -205,7 +271,10 @@ fun BatteryPowerSaverCard(
                             )
                             Text(
                                 text = if (batteryProfile.mapTileRefreshThrottleMs > 0L) {
-                                    "${batteryProfile.mapTileRefreshThrottleMs / 1000}s Eco Idle"
+                                    stringResource(
+                                        R.string.battery_map_eco_idle_format,
+                                        (batteryProfile.mapTileRefreshThrottleMs / 1000).toInt()
+                                    )
                                 } else {
                                     stringResource(R.string.battery_map_realtime_value)
                                 },
@@ -285,6 +354,8 @@ fun BatteryPowerSaverCard(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+            }
                 }
             }
         }

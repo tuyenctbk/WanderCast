@@ -1,204 +1,281 @@
 language_code,language_name,app_name,app_name_char_count,short_description,short_description_char_count,full_description,full_description_char_count
-en,English,WanderCast: AI Walk Audio Tour,30,Turn neighborhood walks into GPS-triggered AI radio documentaries and tours.,76,"WanderCast turns your daily neighborhood walk into a localized 60-second audio radio documentary.
+en,English,WanderCast: AI Walk Audio Tour,30,Turn neighborhood walks into GPS-triggered AI radio documentaries and tours.,76,"WanderCast turns your daily neighborhood walk into a localized 60-second public-radio style documentary.
 
-As you explore on foot, WanderCast detects street block transitions and historical geofence checkpoints to synthesize public-radio style episodes about local history, architecture, bridges, and neighborhood culture.
+As you explore on foot, WanderCast detects street block transitions and geofence boundaries to narrate fascinating stories about local history, architecture, bridges, corner diners, and hidden urban culture—hands-free while you walk.
 
 KEY FEATURES:
-• GPS Geofence Radio Documentaries: Automatically triggers 60-second audio episodes as you enter new street blocks or 42m historical checkpoints.
-• Four Editorial Lenses: Tune your walk between All-Rounder, Architecture & Design, Deep History, and Local Trivia.
-• Interactive Tour Summary & Zero-Key Street Map: View your walked path polyline, numbered checkpoints, geofence visit progress bar, and export GPX 1.1 routes.
-• Multimodal Architecture & Plaque Scanner: Select a photo of a facade or historical plaque using the zero-permission Android Photo Picker for an instant 45-second audio commentary.
-• Walk History Rewards & Digital Badges: Unlock permanent explorer badges (such as Early Bird, Marathoner, and Geofence Pioneer) stored locally in your Room database.
-• Adaptive Low-Battery Saver (<20%): Automatically reduces GPS polling frequency from 4s to 18s and lowers map tile refresh rates when battery drops below 20%.
-• 20-Language Support: Instant in-app localization across 20 global languages.",1339
-vi,Vietnamese (Tiếng Việt),WanderCast: Đài Đi Bộ AI,24,Biến chuyến đi bộ khu phố thành đài phát thanh tài liệu lịch sử GPS bằng AI.,76,"WanderCast biến chuyến đi bộ hàng ngày của bạn thành chương trình phát thanh tài liệu lịch sử và kiến trúc dài 60 giây.
+• GPS Geofence Radio Documentaries: Automatically triggers 60-second audio episodes as you enter new street blocks, with background walking support.
+• Five Editorial Lenses: Switch anytime between Street Documentary, Architecture & Facades, Diners & Local Trivia, Bridges & Hidden Grid, and Deep Block History.
+• Live Radio Host Q&A & Street Trivia: Spot an intriguing building or plaque? Ask your AI host live or test your knowledge with localized block trivia.
+• AI 3-Stop Walking Route Planner: Generate custom 3-stop neighborhood loops and launch turn-by-turn walking directions in Google Maps.
+• Multimodal Facade & Plaque Scanner: Pick a photo of any building facade or historical plaque for an instant 45-second architectural audio commentary.
+• Interactive Tour Map & GPX 1.1 Export: Explore your walked route across dark studio, daylight, OSM, satellite, or offline vector radar maps, track checkpoint progress, share walk postcards, and export GPX 1.1 files.
+• Walk Archive & Explorer Badges: Save completed walks and documentary tapes locally on-device, and unlock 8 digital explorer badges including Early Bird, Marathoner, and Geofence Pioneer.
+• Smart Battery & Offline Saver: Adaptive low-battery mode (<20%) automatically reduces GPS polling (4s to 18s) and throttles map redraws; 65m spatial caching replays nearby episodes offline with optional personal Gemini key (BYOK) support.
+• 20 Languages Built-In: Switch instantly across 20 global languages with localized interface, voice narration, and studio prompts.",1885
+vi,Vietnamese (Tiếng Việt),WanderCast: Đài Đi Bộ AI,24,Biến chuyến đi bộ khu phố thành đài phát thanh tài liệu lịch sử GPS bằng AI.,76,"WanderCast biến chuyến đi bộ hàng ngày của bạn thành chương trình phát thanh tài liệu lịch sử và kiến trúc dài 60 giây đầy cuốn hút.
 
-Khi bạn dạo bước qua từng con phố, WanderCast nhận diện các vùng GPS geofence để tự động thuyết minh về lịch sử địa phương, kiến trúc mặt tiền và văn hóa bản địa.
+Khi bạn dạo bước qua từng con phố, WanderCast tự động nhận diện khu phố và vùng GPS geofence để kể những câu chuyện thú vị về lịch sử địa phương, kiến trúc mặt tiền, cây cầu và văn hóa bản địa—hoàn toàn rảnh tay.
 
 TÍNH NĂNG NỔI BẬT:
-• Phát Thanh Tài Liệu Theo Vị Trí GPS: Tự động phát thuyết minh 60 giây khi bạn bước vào dãy phố mới hoặc điểm di tích lịch sử.
-• Bản Đồ Tổng Kết Tour & Tiến Độ Geofence: Xem lại lộ trình đã đi, thanh tiến độ phần trăm điểm lịch sử đã ghé thăm và xuất tệp GPX 1.1.
-• Máy Quét Kiến Trúc & Biển Lịch Sử AI: Phân tích ảnh chụp mặt tiền tòa nhà hoặc biển đồng lịch sử để nghe bình luận 45 giây.
-• Kho Huy Hiệu Lịch Sử Đi Bộ (Room DB): Mở khóa các huy hiệu kỹ thuật số như Chim Sơn Ca Buổi Sớm (Early Bird) và Vận Động Viên Marathon.
-• Chế Độ Tiết Kiệm Pin Thích Ứng (<20%): Tự động giảm tần suất lấy mẫu GPS (4s → 18s) và hạ tốc độ làm mới ô bản đồ khi pin dưới 20%.
-• Hỗ Trợ 20 Ngôn Ngữ: Chuyển đổi ngôn ngữ tức thì ngay trong ứng dụng.",1037
+• Phát Thanh Tài Liệu Theo GPS: Tự động phát thuyết minh 60 giây khi bạn bước vào dãy phố mới, hỗ trợ chạy nền khi bỏ điện thoại trong túi.
+• 5 Góc Nhìn Biên Tập: Chuyển đổi linh hoạt giữa Phóng Sự Đường Phố, Kiến Trúc & Mặt Tiền, Quán Ăn & Chuyện Lạ Địa Phương, Cầu & Hạ Tầng Ẩn, và Lịch Sử Chiều Sâu Khu Phố.
+• Hỏi Đáp Trực Tiếp & Đố Vui Phố Phường: Đặt câu hỏi trực tiếp cho phát thanh viên AI về tòa nhà trước mắt hoặc thử thách kiến thức lịch sử địa phương.
+• Lập Lộ Trình Đi Bộ 3 Điểm AI: Tạo vòng khám phá 3 điểm dừng quanh bạn và mở chỉ đường đi bộ trên Google Maps.
+• Máy Quét Kiến Trúc & Biển Lịch Sử: Chọn ảnh mặt tiền tòa nhà hoặc biển đồng lịch sử để nghe bình luận kiến trúc 45 giây.
+• Bản Đồ Tổng Kết Tour & Xuất GPX 1.1: Xem lộ trình đã đi trên bản đồ tối, ban ngày, vệ tinh hoặc radar vector ngoại tuyến, theo dõi tiến độ điểm ghé thăm, chia sẻ bưu thiếp và xuất tệp GPX 1.1.
+• Kho Lưu Trữ & 8 Huy Hiệu Thám Hiểm: Lưu trọn hành trình và băng ghi âm ngay trên thiết bị, mở khóa các huy hiệu như Chim Sơn Ca Buổi Sớm, Vận Động Viên Marathon và Người Tiên Phong Geofence.
+• Tiết Kiệm Pin Thông Minh & Bộ Đệm Ngoại Tuyến: Tự động giảm chu kỳ GPS (4s → 18s) và làm mới bản đồ khi pin dưới 20%; bộ nhớ đệm không gian 65m phát lại không cần mạng, hỗ trợ khóa Gemini cá nhân (BYOK).
+• Hỗ Trợ 20 Ngôn Ngữ: Chuyển đổi ngôn ngữ tức thì cho toàn bộ giao diện và giọng đọc thuyết minh.",1756
 es,Spanish (Español),WanderCast: Audio Tour IA,25,Convierte tus caminatas en documentales de radio con GPS e inteligencia IA.,75,"WanderCast convierte tu caminata diaria por el vecindario en un documental de radio localizado de 60 segundos.
 
-A medida que caminas, la aplicación detecta el cruce de calles y puntos de control geofence para narrar episodios sobre historia local, arquitectura y cultura urbana.
+Mientras caminas, WanderCast detecta el cruce de calles y zonas geofence para narrar historias fascinantes sobre historia local, arquitectura, puentes y cultura urbana, sin usar las manos.
 
 CARACTERÍSTICAS PRINCIPALES:
-• Documentales de Radio por GPS: Activa episodios de audio de 60 segundos al entrar en nuevas cuadras o zonas históricas.
-• Mapa de Resumen del Tour y Progreso Geofence: Visualiza tu ruta a pie, barra de progreso de puntos visitados y exporta archivos GPX 1.1.
-• Escáner Visual de Arquitectura y Placas: Analiza fotos de fachadas o placas históricas para escuchar un comentario de 45 segundos.
-• Recompensas e Insignias Digitales: Desbloquea insignias como Madrugador (Early Bird) y Maratonista guardadas localmente en Room DB.
-• Modo de Ahorro de Batería (<20%): Reduce automáticamente el sondeo GPS (4s a 18s) y el refresco del mapa cuando la batería baja del 20%.",975
+• Documentales de Radio por GPS: Activa automáticamente episodios de 60 segundos al entrar en nuevas cuadras, con seguimiento en segundo plano.
+• Cinco Enfoques Editoriales: Cambia entre Documental Callejero, Arquitectura y Fachadas, Cafés y Curiosidades, Puentes e Infraestructura, e Historia Profunda.
+• Preguntas en Vivo y Trivia Urbana: Pregunta en directo al presentador IA sobre cualquier edificio o juega trivias históricas de tu calle.
+• Planificador de Rutas de 3 Paradas: Diseña recorridos a pie de 3 paradas y abre indicaciones paso a paso en Google Maps.
+• Escáner de Fachadas y Placas: Elige una foto de un edificio o placa histórica para escuchar un comentario arquitectónico de 45 segundos.
+• Mapa Interactivo y Exportación GPX 1.1: Revisa tu ruta en mapas oscuros, diurnos, satelitales o radar vectorial sin conexión, sigue tu progreso y exporta archivos GPX 1.1.
+• Archivo Local y 8 Insignias Digitales: Guarda caminatas y grabaciones en tu dispositivo y desbloquea insignias como Madrugador, Maratonista y Pionero Geofence.
+• Ahorro de Batería (<20%) y Caché Sin Conexión: Reduce el sondeo GPS (4s a 18s) bajo 20% de batería, reutiliza episodios cercanos en caché espacial de 65m y admite clave personal Gemini (BYOK).
+• 20 Idiomas Integrados: Cambio instantáneo de idioma en toda la aplicación y en la narración de voz.",1669
 fr,French (Français),WanderCast: Audio Guide IA,26,Transformez vos balades en documentaires radio GPS guidés par l’IA.,67,"WanderCast transforme votre promenade quotidienne en un documentaire radio localisé de 60 secondes.
 
-En marchant, WanderCast détecte les changements de rue et les zones geofence historiques pour raconter l’histoire, l’architecture et la culture du quartier.
+En marchant, WanderCast détecte chaque changement de rue et zone geofence pour raconter l’histoire locale, l’architecture, les ponts et la culture de quartier, les mains libres.
 
 FONCTIONNALITÉS CLÉS :
-• Documentaires Radio GPS : Déclenche automatiquement des récits audio de 60 secondes à chaque nouveau pâté de maisons.
-• Carte Récapitulative et Progression Geofence : Suivez votre itinéraire, le pourcentage de points historiques visités et exportez en GPX 1.1.
-• Scanner Photo d’Architecture : Analysez une façade ou une plaque historique pour écouter un commentaire audio de 45 secondes.
-• Badges et Récompenses de Marche : Débloquez des badges numériques (Lève-Tôt, Marathonien) stockés localement dans Room DB.
-• Mode Économie de Batterie (<20%) : Réduit automatiquement la fréquence GPS (4s à 18s) et le rafraîchissement des tuiles de carte sous 20% de batterie.",950
+• Documentaires Radio GPS : Déclenche automatiquement des récits audio de 60 secondes à chaque nouveau pâté de maisons, même téléphone en poche.
+• Cinq Angles Éditoriaux : Choisissez entre Documentaire Urbain, Architecture & Façades, Bistros & Anecdotes, Ponts & Réseaux Cachés, et Histoire Profonde.
+• Questions en Direct & Quiz Urbain : Interrogez l’animateur IA sur un bâtiment ou testez vos connaissances historiques locales.
+• Planificateur d’Itinéraire en 3 Étapes : Créez une boucle pédestre en 3 étapes et lancez l’itinéraire dans Google Maps.
+• Scanner de Façades et Plaques : Sélectionnez la photo d’un édifice ou d’une plaque pour un commentaire architectural de 45 secondes.
+• Carte Interactive & Export GPX 1.1 : Visualisez votre parcours (mode sombre, rue, satellite ou radar vectoriel hors ligne), suivez les points visités et exportez en GPX 1.1.
+• Archives & 8 Badges d’Explorateur : Conservez vos balades sur l’appareil et débloquez des badges tels que Lève-Tôt, Marathonien et Pionnier Geofence.
+• Économie de Batterie (<20%) & Cache Hors Ligne : Ralentit automatiquement le GPS (4s à 18s) sous 20% de batterie, cache spatial de 65m et prise en charge de votre clé Gemini (BYOK).
+• 20 Langues Intégrées : Changement instantané de langue dans toute l’interface et la narration.",1598
 de,German (Deutsch),WanderCast: KI Audio Tour,25,Verwandeln Sie Spaziergänge in GPS-gesteuerte KI-Radiodokumentationen.,70,"WanderCast verwandelt Ihren täglichen Spaziergang in eine 60-sekündige Radiodokumentation über Ihr Viertel.
 
-Während Sie zu Fuß unterwegs sind, erkennt WanderCast Straßenblöcke und historische Geofence-Punkte und erzählt Geschichten über Architektur, Geschichte und lokale Kultur.
+Während Sie zu Fuß unterwegs sind, erkennt WanderCast Straßenblöcke und Geofence-Zonen und erzählt Geschichten über Lokalgeschichte, Architektur, Brücken und Stadtkultur – ganz ohne auf den Bildschirm zu schauen.
 
 HAUPTFUNKTIONEN:
-• GPS-Geofence-Radiodokumentationen: Automatische 60-Sekunden-Audioepisoden beim Betreten neuer Straßenblöcke.
-• Tour-Zusammenfassung & Interaktive Karte: Routenvorschau, Fortschrittsbalken besuchter Sehenswürdigkeiten und GPX 1.1-Export.
-• Fassaden- & Plaketten-Scanner: Analysiert Fotos von Gebäuden für einen 45-sekündigen Architekturkommentar.
-• Spaziergang-Abzeichen (Room DB): Schalten Sie digitale Abzeichen wie Frühaufsteher und Marathonläufer frei.
-• Adaptiver Akkusparmodus (<20%): Reduziert automatisch das GPS-Intervall (4s auf 18s) und die Kartenaktualisierung bei unter 20% Akku.",892
+• GPS-Geofence-Radiodokumentationen: Startet automatisch 60-Sekunden-Audioepisoden beim Betreten neuer Straßenblöcke, inklusive Hintergrundbetrieb.
+• Fünf Redaktionelle Perspektiven: Wählen Sie zwischen Straßendoku, Architektur & Fassaden, Lokalkultur & Trivia, Brücken & Infrastruktur sowie Tiefer Ortsgeschichte.
+• Live-Host-Q&A & Straßen-Quiz: Stellen Sie dem KI-Moderator Fragen zu Gebäuden oder spielen Sie lokales Geschichts-Quiz.
+• KI-3-Stopp-Routenplaner: Planen Sie Rundgänge mit 3 Stationen und öffnen Sie die Fußwegnavigation in Google Maps.
+• Fassaden- & Plaketten-Scanner: Wählen Sie ein Foto eines Gebäudes oder einer Gedenktafel für einen 45-Sekunden-Kommentar.
+• Interaktive Tourenkarte & GPX 1.1-Export: Routenansicht in Dark Studio, Straße, Satellit oder Offline-Vektorradar, Besuchsfortschritt und GPX-Export.
+• Archiv & 8 Entdecker-Abzeichen: Speichern Sie Touren lokal auf dem Gerät und schalten Sie Abzeichen wie Frühaufsteher und Marathonläufer frei.
+• Adaptiver Akkusparmodus (<20%) & Offline-Cache: Reduziert GPS-Abfragen (4s auf 18s) unter 20% Akku, 65m-Raumcache und optionaler eigener Gemini-Schlüssel (BYOK).
+• 20 Sprachen Integriert: Sofortiger Sprachwechsel für Oberfläche und Sprachausgabe.",1562
 ja,Japanese (日本語),WanderCast: AI街歩き音声ガイド,22,日々の街歩きをGPS連動のAIラジオドキュメンタリー＆歴史ツアーに変える音声ガイド。,42,"WanderCastは、毎日の街歩きを60秒のローカルラジオ・ドキュメンタリーに変えるAI音声ツアーアプリです。
 
-歩いている街区や歴史的ジオフェンス地点をGPSで検知し、建築、地域の歴史、街のトリビアをラジオ番組スタイルで音声解説します。
+歩いている街区やGPSジオフェンスを自動検知し、地域の歴史、建築デザイン、橋梁、街角のカルチャーをラジオ番組スタイルでハンズフリー解説してくれます。
 
 主な機能：
-• GPS連動ラジオドキュメンタリー：新しい街区や歴史スポットに入ると60秒の音声エピソードを自動再生。
-• ツアー概要マップ＆訪問進捗バー：歩いたルート軌跡や訪問済みスポットの達成率を地図上で確認し、GPX 1.1出力にも対応。
-• 建築・銘板カメラスキャナー：建物や歴史プレートの写真をAI解析して45秒の解説をナレーション。
-• 街歩き履歴バッジコレクション：早起き探検家（Early Bird）やマラソナーなどのデジタルバッジをローカルRoom DBに保存。
-• バッテリー節約モード（残量20%未満）：電池残量が20%を下回るとGPS測位間隔（4秒→18秒）と地図タイル更新を自動抑制します。",429
+• GPS連動ラジオドキュメンタリー：新しい街区に入ると60秒の音声エピソードを自動再生。ポケットに入れたままのバックグラウンド歩行にも対応。
+• 5つの編集レンズ：街歩きドキュメンタリー、建築＆ファサード、地元トリビア、橋＆インフラ、深掘り地域史から自在に切替可能。
+• ライブ質問＆街角トリビア：気になる建物についてAIホストへ質問したり、その場限りの歴史クイズに挑戦できます。
+• AI 3スポット散策ルート提案：周辺の3拠点を巡るウォーキングコースを作成し、Google マップで徒歩ナビを起動。
+• 建築・銘板フォトスキャナー：建物や歴史プレートの写真を選ぶだけで、45秒の建築解説を音声ナレーション。
+• ツアー概要マップ＆GPX 1.1出力：ダーク・通常・衛星・オフラインベクターレーダー地図で歩行軌跡と訪問率を確認し、GPX 1.1で書き出し。
+• ローカルアーカイブ＆8種の探検バッジ：歩いたルートと録音テープを端末に保存し、早起き探検家やマラソナーなどのバッジを解除。
+• 適応型省電力モード（20%未満）＆空間キャッシュ：電池残量20%未満でGPS間隔を4秒→18秒に自動調整。65m空間キャッシュや個人Geminiキー（BYOK）にも対応。
+• 20言語に即時対応：アプリUIと音声ナレーションを20言語でワンタップ切替。",713
 ko,Korean (한국어),WanderCast: AI 도보 오디오 투어,24,일상 산책을 GPS 기반 AI 라디오 다큐멘터리와 역사 오디오 투어로 바꿔보세요.,45,"WanderCast는 일상의 동네 산책을 60초 분량의 로컬 라디오 다큐멘터리로 바꾸어 주는 AI 도보 투어 앱입니다.
 
-걸어가는 동안 GPS 지오펜스와 거리 블록을 감지하여 지역의 역사, 건축물, 숨은 이야기를 라디오 방송 스타일로 들려줍니다.
+걸어가는 동안 GPS 지오펜스와 거리 블록을 감지하여 지역 역사, 건축물, 다리, 골목 문화를 라디오 방송 스타일로 핸즈프리 해설해 줍니다.
 
 주요 기능:
-• GPS 지오펜스 라디오 다큐멘터리: 새로운 거리 블록이나 역사 지점에 들어서면 60초 오디오 에피소드를 자동 재생합니다.
-• 투어 요약 지도 및 방문 진행률 바: 이동 경로 폴리라인과 역사 지점 방문 달성률을 확인하고 GPX 1.1로 내보냅니다.
-• 건축물 및 명판 비전 스캐너: 건물 외관이나 역사 명판 사진을 분석하여 45초 오디오 해설을 제공합니다.
-• 산책 히스토리 디지털 배지: 얼리버드, 마라토너 등 탐험 배지를 로컬 Room DB에 영구 보관합니다.
-• 배터리 절약 모드(20% 미만): 배터리가 20% 미만일 때 GPS 폴링 주기(4초→18초)와 지도 타일 새로고침 빈도를 자동으로 낮춥니다.",487
+• GPS 지오펜스 라디오 다큐멘터리: 새로운 거리 블록에 들어서면 60초 오디오 에피소드를 자동 재생하며 백그라운드 산책을 지원합니다.
+• 5가지 에디토리얼 렌즈: 거리 다큐멘터리, 건축과 외관, 동네 트리비아, 다리와 인프라, 심층 지역사 중 원하는 테마를 선택하세요.
+• 실시간 호스트 Q&A 및 거리 퀴즈: 눈앞의 건물이나 명판에 대해 AI 진행자에게 질문하거나 지역 역사 퀴즈를 즐길 수 있습니다.
+• AI 3코스 도보 경로 플래너: 주변 3곳을 잇는 산책 루트를 생성하고 Google 지도 도보 길안내로 바로 연결합니다.
+• 건축물 및 명판 포토 스캐너: 건물 외관이나 역사 명판 사진을 선택하면 45초 분량의 건축 오디오 해설을 제공합니다.
+• 인터랙티브 투어 지도 및 GPX 1.1 내보내기: 다크, 일반, 위성, 오프라인 벡터 레이더 지도로 경로와 방문 진행률을 확인하고 GPX 1.1로 내보냅니다.
+• 산책 아카이브 및 8종 탐험 배지: 완료한 산책과 오디오 테이프를 기기에 저장하고 얼리버드, 마라토너 등 배지를 획득하세요.
+• 적응형 배터리 절약(20% 미만) 및 오프라인 캐시: 배터리 20% 미만 시 GPS 주기(4초→18초) 자동 절감, 65m 공간 캐시와 개인 Gemini 키(BYOK) 지원.
+• 20개 언어 즉시 전환: 앱 화면과 음성 해설을 20개 언어로 간편하게 변경할 수 있습니다.",837
 zh-CN,Simplified Chinese (简体中文),WanderCast: AI步行语音导览,20,将日常街区漫步转化为GPS触发的AI电台纪录片与历史建筑语音导览。,33,"WanderCast 将您的日常街区漫步转化为 60 秒的本地化电台纪录片。
 
-当您步行探索时，应用会通过 GPS 地理围栏检测街区切换与历史地标，自动播报关于建筑设计、城市历史与街区文化的语音故事。
+当您步行探索时，应用通过 GPS 地理围栏自动感知街区切换，免提为您播报关于城市历史、建筑立面、桥梁工程与街角文化的精彩语音故事。
 
 核心功能：
-• GPS 地理围栏电台纪录片：进入新街区或 42 米历史检查点时，自动合成并朗读 60 秒语音节目。
-• 路线总结地图与访问进度条：查看步行轨迹、历史地标访问百分比，并支持导出 GPX 1.1 路线文件。
-• 建筑立面与铭牌视觉扫描：分析建筑或历史铭牌照片，生成 45 秒建筑历史语音解说。
-• 漫步历史徽章收藏（Room 数据库）：完成历史路线即可解锁“晨鸟先锋”、“马拉松行者”等数字徽章。
-• 自适应省电模式（电量 <20%）：当设备电量低于 20% 时，自动将 GPS 轮询间隔从 4 秒延长至 18 秒并降低地图瓦片刷新率。",376
+• GPS 地理围栏电台纪录片：步入新街区即自动触发 60 秒语音节目，支持息屏后台步行播报。
+• 五大编辑视角：随心切换街头纪实、建筑与立面、街角文化与趣闻、桥梁与隐秘城市网格、街区深度历史。
+• 电台主播实时问答与街头趣味问答：对眼前的建筑或铭牌随时提问，或参与基于当前街区的历史知识挑战。
+• AI 三站步行路线规划：一键生成附近 3 个历史站点环线，并直达 Google 地图步行导航。
+• 建筑立面与铭牌视觉扫描：选取建筑或历史铭牌照片，即刻收听 45 秒建筑工艺与年代音频解说。
+• 互动路线地图与 GPX 1.1 导出：支持暗黑、街道、卫星及离线矢量雷达视图，查看打卡进度、分享漫步明信片并导出 GPX 1.1。
+• 本地档案与 8 枚探索徽章：在设备本地珍藏历史路线与录音，解锁“晨鸟先锋”“马拉松行者”等 8 枚数字徽章。
+• 自适应省电（<20%）与空间缓存：电量低于 20% 自动将 GPS 轮询从 4 秒降至 18 秒并节流地图刷新；支持 65 米空间缓存离线回放及自带个人 Gemini 密钥（BYOK）。
+• 内置 20 种语言：应用界面与语音播报一键切换 20 种全球语言。",615
 pt,Portuguese (Português),WanderCast: Tour de Áudio IA,28,Transforme caminhadas em documentários de rádio GPS guiados por IA.,67,"WanderCast transforma sua caminhada diária pelo bairro em um documentário de rádio localizado de 60 segundos.
 
-Enquanto você caminha, o aplicativo detecta cruzamentos e zonas geofence históricas para narrar episódios sobre arquitetura, história local e cultura urbana.
+Enquanto você caminha, o WanderCast detecta mudanças de quarteirão e zonas geofence para narrar histórias sobre história local, arquitetura, pontes e cultura urbana, sem precisar olhar para a tela.
 
 RECURSOS PRINCIPAIS:
-• Documentários de Rádio via GPS: Dispara episódios de áudio de 60 segundos ao entrar em novos quarteirões.
-• Mapa do Resumo do Tour e Progresso Geofence: Visualize sua rota, a barra de progresso de pontos visitados e exporte em GPX 1.1.
-• Scanner Visual de Arquitetura: Analise fotos de fachadas ou placas históricas com narração de 45 segundos.
-• Conquistas e Insígnias Digitais: Desbloqueie medalhas como Madrugador e Maratonista salvas no banco Room local.
-• Economia de Bateria (<20%): Reduz automaticamente a frequência do GPS (4s para 18s) e a atualização do mapa quando a bateria fica abaixo de 20%.",898
+• Documentários de Rádio via GPS: Dispara automaticamente episódios de 60 segundos ao entrar em novos quarteirões, com suporte em segundo plano.
+• Cinco Lentes Editoriais: Alterne entre Documentário de Rua, Arquitetura e Fachadas, Bares e Curiosidades, Pontes e Infraestrutura e História Profunda.
+• Perguntas ao Vivo e Quiz Urbano: Pergunte ao apresentador IA sobre qualquer prédio ou teste seus conhecimentos com quizzes locais.
+• Planejador de Rota de 3 Paradas: Crie circuitos a pé de 3 paradas e abra rotas passo a passo no Google Maps.
+• Scanner de Fachadas e Placas: Escolha a foto de um edifício ou placa histórica para ouvir um comentário arquitetônico de 45 segundos.
+• Mapa Interativo e Exportação GPX 1.1: Veja seu trajeto em mapas escuro, diurno, satélite ou radar vetorial offline, acompanhe o progresso e exporte em GPX 1.1.
+• Arquivo Local e 8 Insígnias: Salve caminhadas e gravações no dispositivo e desbloqueie conquistas como Madrugador, Maratonista e Pioneiro Geofence.
+• Economia de Bateria (<20%) e Cache Offline: Reduz o GPS (4s para 18s) abaixo de 20% de bateria, oferece cache espacial de 65m e suporte a chave pessoal Gemini (BYOK).
+• 20 Idiomas Integrados: Troca instantânea de idioma em toda a interface e narração.",1574
 it,Italian (Italiano),WanderCast: Audio Tour IA,25,Trasforma le passeggiate in documentari radiofonici GPS con guida IA.,69,"WanderCast trasforma la tua passeggiata quotidiana in un documentario radiofonico localizzato di 60 secondi.
 
-Mentre cammini, l’app rileva gli isolati e i punti geofence storici per raccontare storia locale, architettura e curiosità di quartiere.
+Mentre cammini, WanderCast rileva i cambi di isolato e le aree geofence per raccontare storia locale, architettura, ponti e curiosità di quartiere, a mani libere.
 
 CARATTERISTICHE PRINCIPALI:
-• Documentari Radio GPS: Attiva episodi audio di 60 secondi quando entri in un nuovo isolato o punto storico.
-• Mappa Riepilogo Tour e Progresso Geofence: Visualizza il percorso a piedi, la percentuale di punti storici visitati ed esporta file GPX 1.1.
-• Scanner Fotografico di Facciate e Targhe: Analizza foto di edifici storici per un commento audio di 45 secondi.
-• Badge e Ricompense di Camminata: Sblocca badge digitali come Mattiniero e Maratoneta salvati localmente in Room DB.
-• Risparmio Batteria Adattivo (<20%): Riduce automaticamente la frequenza GPS (da 4s a 18s) e l’aggiornamento dei tasselli mappa sotto il 20% di batteria.",915
+• Documentari Radio GPS: Avvia automaticamente episodi audio di 60 secondi entrando in un nuovo isolato, anche in background.
+• Cinque Stili Editoriali: Scegli tra Documentario Urbano, Architettura e Facciate, Locali e Curiosità, Ponti e Infrastrutture, e Storia Profonda.
+• Domande in Diretta e Quiz di Quartiere: Chiedi allo speaker IA dettagli su un edificio o sfida te stesso con quiz storici locali.
+• Percorsi a Piedi in 3 Tappe: Genera itinerari ad anello di 3 tappe e apri le indicazioni pedonali su Google Maps.
+• Scanner di Facciate e Targhe: Seleziona una foto di un edificio o una targa storica per un commento audio di 45 secondi.
+• Mappa Interattiva ed Export GPX 1.1: Visualizza il percorso su mappe scure, stradali, satellitari o radar vettoriale offline ed esporta in GPX 1.1.
+• Archivio Locale e 8 Badge Esploratore: Salva percorsi e audio sul dispositivo e sblocca badge come Mattiniero, Maratoneta e Pioniere Geofence.
+• Risparmio Batteria (<20%) e Cache Offline: Riduce il polling GPS (4s a 18s) sotto il 20%, integra cache spaziale da 65m e chiave personale Gemini (BYOK).
+• 20 Lingue Integrate: Cambio immediato della lingua per interfaccia e voce narrante.",1482
 ru,Russian (Русский),WanderCast: ИИ Аудиогид,23,Превратите прогулки по городу в GPS-радиодокументалистику с ИИ-гидом.,69,"WanderCast превращает вашу ежедневную прогулку по городу в 60-секундные выпуски документального радио.
 
-Во время ходьбы приложение отслеживает пересечение кварталов и исторических геозон, озвучивая истории об архитектуре, мостах и культуре района.
+Во время ходьбы приложение определяет пересечение кварталов и геозон, озвучивая истории об архитектуре, мостах, местной истории и городской культуре без необходимости смотреть на экран.
 
 ОСНОВНЫЕ ВОЗМОЖНОСТИ:
-• GPS-радиодокументалистика: Автоматический запуск 60-секундных аудиовыпусков при входе в новый квартал.
-• Карта маршрута и прогресс геозон: Просмотр пройденного пути, шкалы посещенных исторических точек и экспорт в GPX 1.1.
-• Сканер архитектуры и табличек: Анализ фотографий фасадов с 45-секундным аудиокомментарием.
-• Награды и цифровые значки (Room DB): Открывайте значки «Ранняя пташка» и «Марафонец» за завершенные маршруты.
-• Энергосбережение (<20% заряда): Автоматически снижает частоту опроса GPS (с 4с до 18с) и обновление тайлов карты при заряде ниже 20%.",836
-ar,Arabic (العربية),WanderCast: جولة صوتية ذكية,27,حوّل جولات المشي اليومية إلى برنامج راديو وثائقي بالذكاء الاصطناعي وGPS.,72,"يحوّل تطبيق WanderCast جولتك اليومية سيرًا على الأقدام إلى حلقات راديو وثائقية مدتها 60 ثانية.
+• GPS-радиодокументалистика: Автоматический запуск 60-секундных аудиовыпусков при входе в новый квартал с поддержкой работы в фоне.
+• Пять редакционных форматов: Уличный репортаж, Архитектура и фасады, Местные истории, Мосты и инфраструктура, Глубокая история района.
+• Вопросы ведущему и уличная викторина: Задавайте ИИ-ведущему вопросы о зданиях рядом или проходите исторические викторины.
+• ИИ-маршруты из 3 остановок: Создавайте пешие маршруты по району и открывайте навигацию в Google Картах.
+• Сканер фасадов и табличек: Выберите фото здания или памятной доски для 45-секундного архитектурного комментария.
+• Интерактивная карта и экспорт GPX 1.1: Просмотр маршрута (темная, дневная, спутниковая или офлайн векторная карта), прогресс точек и экспорт GPX 1.1.
+• Архив прогулок и 8 значков: Сохраняйте маршруты и записи на устройстве, открывайте значки «Ранняя пташка», «Марафонец» и другие.
+• Адаптивное энергосбережение (<20%) и кэш: При заряде ниже 20% опрос GPS снижается с 4с до 18с; 65-метровый пространственный кэш и поддержка личного ключа Gemini (BYOK).
+• 20 языков в приложении: Мгновенное переключение языка интерфейса и озвучки.",1457
+ar,Arabic (العربية),WanderCast: جولة صوتية ذكية,27,حوّل جولات المشي اليومية إلى برنامج راديو وثائقي بالذكاء الاصطناعي وGPS.,72,"يحوّل تطبيق WanderCast جولتك اليومية سيرًا على الأقدام إلى حلقات راديو وثائقية محلية مدتها 60 ثانية.
 
-أثناء المشي، يكتشف التطبيق انتقالك بين الشوارع والمناطق التاريخية عبر GPS ليروي لك قصص الهندسة المعمارية والتاريخ المحلي.
+أثناء المشي، يكتشف التطبيق انتقالك بين الشوارع والمناطق الجغرافية عبر GPS ليروي لك قصص التاريخ المحلي، الهندسة المعمارية، الجسور وثقافة الأحياء دون استخدام اليدين.
 
 الميزات الرئيسية:
-• حلقات راديو وثائقية عبر GPS: تشغيل تلقائي لحلقات صوتية مدتها 60 ثانية عند دخول شوارع أو معالم جديدة.
-• خريطة ملخص الجولة وشريط التقدم: عرض مسار المشي ونسبة النقاط التاريخية التي تمت زيارتها مع تصدير GPX 1.1.
-• ماسح الواجهات واللوحات التاريخية: تحليل صور المباني لتقديم تعليق صوتي معماري مدته 45 ثانية.
-• مكافآت وشارات المشي الرقمية: افتح شارات المستكشف مثل طائر الصباح والماراثون المحفوظة محليًا في قاعدة بيانات Room.
-• وضع توفير البطارية التكيفي (أقل من 20%): يقلل تلقائيًا من تكرار استطلاع GPS (من 4 إلى 18 ثانية) ومعدل تحديث الخريطة عندما تنخفض البطارية دون 20%.",804
+• حلقات راديو وثائقية عبر GPS: تشغيل تلقائي لحلقات صوتية مدتها 60 ثانية عند دخول شوارع جديدة مع دعم التتبع في الخلفية.
+• خمس عدسات تحريرية: تنقّل بين وثائقي الشارع، العمارة والواجهات، الثقافة المحلية، الجسور والبنية التحتية، والتاريخ العميق.
+• أسئلة مباشرة ومسابقات الأحياء: اسأل المذيع الذكي مباشرة عن أي مبنى أو اختبر معلوماتك بأسئلة تاريخية محلية.
+• مخطط مسارات من 3 محطات: أنشئ جولة مشي مخصصة وافتح الاتجاهات خطوة بخطوة في خرائط Google.
+• ماسح الواجهات واللوحات التاريخية: اختر صورة لأي واجهة مبنى أو لوحة تذكارية للاستماع إلى تعليق معماري مدته 45 ثانية.
+• خريطة جولة تفاعلية وتصدير GPX 1.1: استعرض مسارك بخرائط داكنة أو نهارية أو أقمار صناعية أو رادار متجه دون إنترنت وصدّر ملفات GPX 1.1.
+• أرشيف محلي و8 أوسمة مستكشف: احفظ جولاتك وتسجيلاتك على جهازك وافتح أوسمة مثل طائر الصباح والماراثون ورائد النطاق الجغرافي.
+• توفير البطارية الذكي (<20%) والذاكرة المؤقتة: يقلل فحص GPS تلقائيًا (من 4 إلى 18 ثانية) تحت 20%، مع تخزين مكاني 65م ودعم مفتاح Gemini الشخصي (BYOK).
+• دعم 20 لغة عالمية: تبديل فوري للغة الواجهة والسرد الصوتي.",1313
 hi,Hindi (हिन्दी),WanderCast: AI ऑडियो वॉक टूर,28,अपनी पैदल यात्रा को GPS और AI आधारित रेडियो डॉक्यूमेंट्री टूर में बदलें।,72,"WanderCast आपकी दैनिक पैदल यात्रा को 60-सेकंड के स्थानीय रेडियो डॉक्यूमेंट्री अनुभव में बदल देता है।
 
-जैसे ही आप चलते हैं, ऐप GPS जियोफेंस और सड़क ब्लॉक की पहचान करके स्थानीय इतिहास, वास्तुकला और संस्कृति की कहानियाँ सुनाता है।
+जैसे-जैसे आप चलते हैं, WanderCast GPS जियोफेंस और नए स्ट्रीट ब्लॉक को पहचानकर स्थानीय इतिहास, वास्तुकला, पुलों और मोहल्ले की संस्कृति की कहानियाँ हैंड्स-फ्री सुनाता है।
 
-मुख्य विशेषताएं:
-• GPS जियोफेंस रेडियो डॉक्यूमेंट्री: नए ब्लॉक या ऐतिहासिक बिंदु पर पहुँचते ही 60-सेकंड का ऑडियो एपिसोड। 
-• टूर सारांश मैप और प्रगति बार: अपने चले गए मार्ग, देखे गए ऐतिहासिक स्थानों का प्रतिशत और GPX 1.1 एक्सपोर्ट देखें।
-• वास्तुकला और पट्टिका फोटो स्कैनर: इमारत की फोटो से 45-सेकंड की ऑडियो व्याख्या प्राप्त करें।
-• वॉक हिस्ट्री डिजिटल बैज: अर्ली बर्ड और मैराथनर जैसे डिजिटल बैज अनलॉक करें जो लोकल Room डेटाबेस में सुरक्षित रहते हैं।
-• बैटरी सेवर मोड (<20% बैटरी): बैटरी 20% से कम होने पर GPS पोलिंग (4s से 18s) और मैप टाइल रिफ्रेश दर को स्वचालित रूप से कम करता है।",811
+मुख्य विशेषताएँ:
+• GPS जियोफेंस रेडियो डॉक्यूमेंट्री: नए ब्लॉक में प्रवेश करते ही 60-सेकंड का ऑडियो एपिसोड स्वचालित रूप से शुरू होता है, बैकग्राउंड सपोर्ट के साथ।
+• 5 एडिटोरियल लेंस: स्ट्रीट डॉक्यूमेंट्री, वास्तुकला, स्थानीय ट्रिविया, पुल व बुनियादी ढांचा और गहरा इतिहास में से चुनें।
+• लाइव रेडियो होस्ट Q&A और स्ट्रीट ट्रिविया: किसी इमारत के बारे में लाइव सवाल पूछें या स्थानीय इतिहास क्विज़ खेलें।
+• AI 3-स्टॉप वॉकिंग रूट प्लानर: आसपास के 3 ऐतिहासिक स्टॉप का रूट बनाएँ और Google Maps में पैदल दिशा-निर्देश खोलें।
+• वास्तुकला और पट्टिका फोटो स्कैनर: किसी भी इमारत या ऐतिहासिक पट्टिका की फोटो से 45-सेकंड की ऑडियो व्याख्या सुनें।
+• इंटरैक्टिव टूर मैप और GPX 1.1 एक्सपोर्ट: डार्क, स्ट्रीट, सैटेलाइट या ऑफ़लाइन वेक्टर रडार मैप पर अपना मार्ग देखें और GPX 1.1 फ़ाइल एक्सपोर्ट करें।
+• लोकल आर्काइव और 8 एक्सप्लोरर बैज: अपनी यात्राएँ डिवाइस पर सहेजें और अर्ली बर्ड, मैराथनर व जियोफेंस पायनियर जैसे बैज अनलॉक करें।
+• बैटरी सेवर (<20%) और ऑफ़लाइन कैश: 20% से कम बैटरी पर GPS पोलिंग (4s से 18s) स्वचालित रूप से कम करता है; 65m स्पैशियल कैश और निजी Gemini कुंजी (BYOK) सपोर्ट।
+• 20 भाषाओं का समर्थन: ऐप और वॉइस नैरेशन को तुरंत 20 वैश्विक भाषाओं में बदलें।",1418
 id,Indonesian (Bahasa Indonesia),WanderCast: Tur Audio Jalan AI,30,Ubah jalan kaki Anda menjadi dokumenter radio GPS pintar berbasis AI.,69,"WanderCast mengubah jalan kaki harian Anda menjadi dokumenter radio lokal berdurasi 60 detik.
 
-Saat Anda berjalan, aplikasi mendeteksi perpindahan blok jalan dan titik geofence sejarah untuk menceritakan sejarah lokal, arsitektur, dan budaya lingkungan.
+Saat Anda berjalan, WanderCast mendeteksi perpindahan blok jalan dan batas geofence untuk menceritakan sejarah lokal, arsitektur, jembatan, dan budaya lingkungan secara hands-free.
 
 FITUR UTAMA:
-• Dokumenter Radio Geofence GPS: Memutar episode audio 60 detik secara otomatis saat memasuki blok jalan baru.
-• Peta Ringkasan Tur & Bar Progres: Lihat jalur rute jalan kaki, persentase titik sejarah yang dikunjungi, dan ekspor GPX 1.1.
-• Pemindai Foto Arsitektur & Plakat: Analisis foto bangunan untuk komentar audio arsitektur berdurasi 45 detik.
-• Koleksi Lencana Digital (Room DB): Buka lencana seperti Pejalan Pagi (Early Bird) dan Pelari Maraton.
-• Mode Hemat Baterai (<20%): Otomatis mengurangi frekuensi GPS (4d ke 18d) dan laju penyegaran peta saat baterai di bawah 20%.",848
-th,Thai (ภาษาไทย),WanderCast: ทัวร์เสียงเดิน AI,29,เปลี่ยนการเดินชมเมืองให้เป็นรายการวิทยุสารคดี GPS อัจฉริยะด้วย AI,65,"WanderCast เปลี่ยนการเดินเล่นในย่านของคุณให้เป็นรายการวิทยุสารคดีความยาว 60 วินาที
+• Dokumenter Radio Geofence GPS: Memutar episode audio 60 detik secara otomatis saat memasuki blok jalan baru, mendukung mode latar belakang.
+• Lima Lensa Editorial: Pilih antara Dokumenter Jalanan, Arsitektur & Fasad, Kuliner & Trivia Lokal, Jembatan & Infrastruktur, dan Sejarah Mendalam.
+• Tanya Jawab Host & Trivia Jalanan: Ajukan pertanyaan langsung tentang bangunan di depan Anda atau mainkan kuis sejarah lokal.
+• Perencana Rute 3 Pemberhentian AI: Buat rute jalan kaki 3 titik dan buka navigasi di Google Maps.
+• Pemindai Fasad & Plakat: Pilih foto bangunan atau plakat sejarah untuk komentar audio arsitektur berdurasi 45 detik.
+• Peta Tur Interaktif & Ekspor GPX 1.1: Lihat rute Anda di peta gelap, jalan, satelit, atau radar vektor offline, pantau progres, dan ekspor GPX 1.1.
+• Arsip Lokal & 8 Lencana Penjelajah: Simpan rute dan rekaman di perangkat lalu buka lencana seperti Pejalan Pagi, Pelari Maraton, dan Perintis Geofence.
+• Hemat Baterai Adaptif (<20%) & Cache Offline: Otomatis menurunkan GPS (4d ke 18d) di bawah 20% baterai, cache spasial 65m, dan dukungan kunci Gemini pribadi (BYOK).
+• 20 Bahasa Bawaan: Ganti bahasa antarmuka dan narasi suara secara instan di 20 bahasa.",1486
+th,Thai (ภาษาไทย),WanderCast: ทัวร์เสียงเดิน AI,29,เปลี่ยนการเดินชมเมืองให้เป็นรายการวิทยุสารคดี GPS อัจฉริยะด้วย AI,65,"WanderCast เปลี่ยนการเดินเล่นในย่านของคุณให้เป็นรายการวิทยุสารคดีท้องถิ่นความยาว 60 วินาที
 
-ขณะที่คุณเดิน แอปจะตรวจจับการข้ามบล็อกถนนและจุดพิกัดประวัติศาสตร์ GPS geofence เพื่อเล่าเรื่องราวสถาปัตยกรรมและประวัติศาสตร์ท้องถิ่น
+ขณะที่คุณเดิน แอปจะตรวจจับการข้ามบล็อกถนนและขอบเขต GPS geofence เพื่อเล่าเรื่องราวประวัติศาสตร์ท้องถิ่น สถาปัตยกรรม สะพาน และวัฒนธรรมชุมชนแบบแฮนด์ฟรี
 
 ฟีเจอร์เด่น:
-• วิทยุสารคดีตามพิกัด GPS: เล่นเสียงบรรยาย 60 วินาทีอัตโนมัติเมื่อเดินเข้าสู่ช่วงตึกหรือจุดประวัติศาสตร์ใหม่
-• แผนที่สรุปทัวร์และแถบความคืบหน้า: แสดงเส้นทางเดิน เปอร์เซ็นต์จุดประวัติศาสตร์ที่ไปเยือน และส่งออกไฟล์ GPX 1.1
-• สแกนเนอร์ภาพถ่ายสถาปัตยกรรม: วิเคราะห์ภาพถ่ายอาคารหรือป้ายประวัติศาสตร์พร้อมเสียงบรรยาย 45 วินาที
-• สะสมเหรียญตราประวัติการเดิน (Room DB): ปลดล็อกเหรียญตราดิจิทัล เช่น นักสำรวจยามเช้า และนักเดินมาราธอน
-• โหมดประหยัดแบตเตอรี่อัตโนมัติ (<20%): ลดความถี่การดึงพิกัด GPS (4 วิ → 18 วิ) และลดการรีเฟรชไทล์แผนที่เมื่อแบตเตอรี่ต่ำกว่า 20%",785
+• วิทยุสารคดีตามพิกัด GPS: เล่นเสียงบรรยาย 60 วินาทีอัตโนมัติเมื่อเข้าสู่ช่วงตึกใหม่ พร้อมรองรับการทำงานเบื้องหลัง
+• 5 มุมมองสารคดี: เลือกสลับระหว่าง สารคดีถนน สถาปัตยกรรมและหน้าอาคาร เกร็ดท้องถิ่น สะพานและโครงสร้างพื้นฐาน และประวัติศาสตร์เชิงลึก
+• ถาม-ตอบสดและควิซท้องถิ่น: ถามผู้ดำเนินรายการ AI เกี่ยวกับอาคารตรงหน้า หรือร่วมเล่นเกมตอบคำถามประวัติศาสตร์ย่านนั้น
+• วางแผนเส้นทางเดิน 3 จุดด้วย AI: สร้างเส้นทางเดินชม 3 จุดสำคัญและเปิดนำทางเดินเท้าบน Google Maps
+• สแกนเนอร์อาคารและป้ายประวัติศาสตร์: เลือกรูปถ่ายอาคารหรือป้ายจารึกเพื่อรับฟังคำบรรยายสถาปัตยกรรม 45 วินาที
+• แผนที่ทัวร์และส่งออก GPX 1.1: ดูเส้นทางเดินบนแผนที่โหมดมืด ถนน ดาวเทียม หรือเรดาร์เวกเตอร์ออฟไลน์ พร้อมส่งออกไฟล์ GPX 1.1
+• คลังบันทึกและ 8 เหรียญนักสำรวจ: บันทึกทริปและไฟล์เสียงไว้ในเครื่อง พร้อมปลดล็อกเหรียญอย่าง นักสำรวจยามเช้า และนักเดินมาราธอน
+• ประหยัดแบตเตอรี่อัตโนมัติ (<20%) และแคชออฟไลน์: ลดความถี่ GPS (4 วิ → 18 วิ) เมื่อแบตต่ำกว่า 20% พร้อมแคชพื้นที่ 65 ม. และรองรับคีย์ Gemini ส่วนตัว (BYOK)
+• รองรับ 20 ภาษา: สลับภาษาอินเทอร์เฟซและเสียงบรรยายได้ทันที",1294
 tr,Turkish (Türkçe),WanderCast: AI Yürüyüş Turu,27,Yürüyüşlerinizi GPS tetiklemeli AI radyo belgesellerine dönüştürün.,67,"WanderCast, günlük mahalle yürüyüşünüzü 60 saniyelik yerel bir radyo belgeseline dönüştürür.
 
-Siz yürürken uygulama sokak geçişlerini ve tarihi geofence noktalarını algılayarak yerel tarih, mimari ve şehir kültürü hakkında sesli bölümler sunar.
+Siz yürürken uygulama sokak geçişlerini ve geofence sınırlarını algılayarak yerel tarih, mimari, köprüler ve şehir kültürü hakkında eller serbest sesli bölümler sunar.
 
 ÖNE ÇIKAN ÖZELLİKLER:
-• GPS Geofence Radyo Belgeselleri: Yeni sokak bloklarına girdiğinizde 60 saniyelik sesli bölümleri otomatik başlatır.
-• Tur Özeti Haritası ve İlerleme Çubuğu: Yürüyüş rotanızı, ziyaret edilen tarihi noktaların yüzdesini görün ve GPX 1.1 olarak dışa aktarın.
-• Mimari ve Plaket Fotoğraf Tarayıcı: Bina cephelerinin fotoğraflarını analiz ederek 45 saniyelik sesli anlatım sunar.
-• Yürüyüş Geçmişi Rozetleri (Room DB): Erken Kalkan (Early Bird) ve Maratoncu gibi dijital rozetlerin kilidini açın.
-• Uyarlanabilir Pil Tasarrufu (<%20): Pil %20’nin altına düştüğünde GPS yoklama sıklığını (4sn → 18sn) ve harita yenileme hızını otomatik azaltır.",908
+• GPS Geofence Radyo Belgeselleri: Yeni sokak bloklarına girdiğinizde 60 saniyelik sesli bölümleri otomatik başlatır; arka planda çalışmayı destekler.
+• Beş Editoryal Bakış Açısı: Sokak Belgeseli, Mimari ve Cepheler, Yerel Kültür, Köprüler ve Altyapı ile Derin Tarih arasında geçiş yapın.
+• Canlı Sunucu Soru-Cevap ve Sokak Bilgi Yarışması: Gördüğünüz bir bina hakkında AI sunucuya soru sorun veya yerel tarih testi çözün.
+• AI 3 Duraklı Yürüyüş Rotası: 3 duraklı yürüyüş turu oluşturun ve Google Haritalar’da yürüyüş yol tarifini açın.
+• Cephe ve Plaket Tarayıcı: Bir bina veya tarihi plaket fotoğrafı seçerek 45 saniyelik mimari sesli anlatım dinleyin.
+• Etkileşimli Tur Haritası ve GPX 1.1 Dışa Aktarma: Karanlık, sokak, uydu veya çevrimdışı vektör radar haritasında rotanızı görün ve GPX 1.1 dışa aktarın.
+• Yerel Arşiv ve 8 Kaşif Rozeti: Yürüyüşlerinizi cihazda saklayın; Erken Kalkan, Maratoncu ve Geofence Öncüsü gibi rozetler kazanın.
+• Uyarlanabilir Pil Tasarrufu (<%20) ve Çevrimdışı Önbellek: Pil %20 altına düştüğünde GPS aralığını (4sn → 18sn) azaltır; 65m önbellek ve kişisel Gemini anahtarı (BYOK) destekler.
+• 20 Dil Desteği: Arayüzü ve sesli anlatımı 20 dil arasında anında değiştirin.",1487
 nl,Dutch (Nederlands),WanderCast: AI Audio Wandeling,30,Verander stadswandelingen in GPS-gestuurde AI-radiodocumentaires.,65,"WanderCast verandert je dagelijkse buurt- of stadswandeling in een gelokaliseerde radiodocumentaire van 60 seconden.
 
-Terwijl je wandelt, detecteert de app straatblokken en historische geofence-punten om verhalen te vertellen over lokale geschiedenis, architectuur en buurtcultuur.
+Terwijl je wandelt, detecteert WanderCast straatblokken en geofence-grenzen om handsfree verhalen te vertellen over lokale geschiedenis, architectuur, bruggen en buurtcultuur.
 
 BELANGRIJKSTE FUNCTIES:
-• GPS Geofence Radiodocumentaires: Start automatisch audio-afleveringen van 60 seconden bij het betreden van nieuwe straten.
-• Tour-overzichtskaart & Voortgangsbalk: Bekijk je wandelroute, het percentage bezochte historische punten en exporteer GPX 1.1.
-• Architectuur- & Plaquette-scanner: Analyseer foto’s van gevels voor een gesproken toelichting van 45 seconden.
-• Wandelbeloningen & Digitale Badges: Ontgrendel badges zoals Vroege Vogel en Marathonloper in de lokale Room-database.
-• Adaptieve Batterijbesparing (<20%): Verlaagt automatisch de GPS-frequentie (4s naar 18s) en kaartverversing wanneer de batterij onder 20% zakt.",939
-pl,Polish (Polski),WanderCast: Audio Spacer AI,27,Zamień spacery po mieście w radiowe dokumenty GPS tworzone przez AI.,68,"WanderCast zamienia codzienny spacer po okolicy w 60-sekundowe audycje dokumentalne.
+• GPS Geofence Radiodocumentaires: Start automatisch audio-afleveringen van 60 seconden bij elk nieuw straatblok, ook op de achtergrond.
+• Vijf Redactionele Lenzen: Kies tussen Straatdocumentaire, Architectuur & Gevels, Lokale Cultuur & Trivia, Bruggen & Infrastructuur en Diepe Geschiedenis.
+• Live Radiohost Q&A & Straatquiz: Stel live vragen over een gebouw of test je kennis met een lokale geschiedenisquiz.
+• AI 3-Stops Wandelrouteplanner: Stel een rondwandeling met 3 stops samen en open de looproute in Google Maps.
+• Gevel- & Plaquette-scanner: Kies een foto van een gebouw of historische plaquette voor 45 seconden gesproken toelichting.
+• Interactieve Tourkaart & GPX 1.1-export: Bekijk je route op donkere, straat-, satelliet- of offline vectorradarkaarten en exporteer GPX 1.1.
+• Lokaal Archief & 8 Badges: Bewaar wandelingen op je apparaat en ontgrendel 8 badges zoals Vroege Vogel, Marathonloper en Geofence-pionier.
+• Adaptieve Batterijbesparing (<20%) & Offline Cache: Verlaagt GPS-polling (4s naar 18s) onder 20% batterij, 65m ruimtelijke cache en optionele eigen Gemini-sleutel (BYOK).
+• 20 Talen Ingebouwd: Wissel direct van taal voor interface en spraak.",1493
+pl,Polish (Polski),WanderCast: Audio Spacer AI,27,Zamień spacery po mieście w radiowe dokumenty GPS tworzone przez AI.,68,"WanderCast zamienia codzienny spacer po okolicy w 60-sekundowe lokalne audycje dokumentalne.
 
-Podczas spaceru aplikacja wykrywa kolejne kwartały ulic i historyczne punkty geofence, opowiadając o architekturze, historii i lokalnej kulturze.
+Podczas spaceru aplikacja wykrywa kolejne kwartały ulic i strefy geofence, opowiadając bez użycia rąk o historii, architekturze, mostach i lokalnej kulturze.
 
 GŁÓWNE FUNKCJE:
-• Dokumenty Radiowe GPS: Automatyczne 60-sekundowe odcinki audio po wejściu w nowy kwartał ulicy.
-• Mapa Podsumowania Trasy i Pasek Postępu: Podgląd przebytej trasy, procent odwiedzonych punktów historycznych oraz eksport GPX 1.1.
-• Skaner Fasad i Tablic Historycznych: Analiza zdjęć budynków z 45-sekundowym komentarzem lektora.
-• Odznaki za Historię Spacerów (Room DB): Odblokuj cyfrowe odznaki, takie jak Ranny Ptaszek i Maratończyk.
-• Oszczędzanie Baterii (<20%): Automatycznie zmniejsza częstotliwość GPS (z 4s do 18s) oraz odświeżanie kafelków mapy przy baterii poniżej 20%.",829
+• Dokumenty Radiowe GPS: Automatyczne 60-sekundowe odcinki audio po wejściu w nowy kwartał ulicy, także w tle.
+• Pięć Perspektyw Redakcyjnych: Przełączaj między Dokumentem Ulicznym, Architekturą i Fasadami, Lokalnymi Ciekawostkami, Mostami i Infrastrukturą oraz Głęboką Historią.
+• Pytania na Żywo i Quiz Uliczny: Zapytaj prowadzącego AI o mijany budynek lub rozwiąż quiz historyczny o okolicy.
+• Planer Trasy 3 Przystanków AI: Wygeneruj pętlę spacerową i uruchom nawigację pieszą w Mapach Google.
+• Skaner Fasad i Tablic: Wybierz zdjęcie budynku lub tablicy pamiątkowej, aby wysłuchać 45-sekundowego komentarza.
+• Interaktywna Mapa i Eksport GPX 1.1: Przeglądaj trasę na mapie ciemnej, ulicznej, satelitarnej lub wektorowym radarze offline i eksportuj pliki GPX 1.1.
+• Lokalne Archiwum i 8 Odznak: Zapisuj trasy i nagrania na urządzeniu oraz odblokowuj odznaki, w tym Ranny Ptaszek i Maratończyk.
+• Oszczędzanie Baterii (<20%) i Pamięć Offline: Zmniejsza częstotliwość GPS (4s do 18s) poniżej 20% baterii; 65-metrowa pamięć przestrzenna i obsługa własnego klucza Gemini (BYOK).
+• 20 Języków w Aplikacji: Natychmiastowa zmiana języka interfejsu i lektora.",1424
 sv,Swedish (Svenska),WanderCast: AI Ljudpromenad,27,Förvandla stadspromenader till GPS-styrda AI-radiodokumentärer.,63,"WanderCast förvandlar din dagliga promenad till en lokal radiodokumentär på 60 sekunder.
 
-När du går upptäcker appen kvartersgränser och historiska geofence-punkter och berättar om lokalhistoria, arkitektur och stadskultur.
+När du går upptäcker appen kvartersgränser och geofence-zoner och berättar handsfree om lokalhistoria, arkitektur, broar och kvarterskultur.
 
 HUVUDFUNKTIONER:
-• GPS Geofence-radiodokumentärer: Spelar automatiskt upp 60-sekunders ljudavsnitt när du når nya kvarter.
-• Översiktskarta & Förloppsindikator: Se din promenerade rutt, andelen besökta historiska platser och exportera GPX 1.1.
-• Fasad- och Plakettskanner: Analysera foton av byggnader för en 45-sekunders arkitekturkommentar.
-• Promenadmärken i Room DB: Lås upp digitala utmärkelser som Morgonpigg (Early Bird) och Maratonlöpare.
-• Adaptivt Batterisparläge (<20%): Sänker automatiskt GPS-intervallet (4s till 18s) och kartans uppdateringsfrekvens när batteriet understiger 20%.",819
-uk,Ukrainian (Українська),WanderCast: ШІ Аудіотур,23,Перетворіть прогулянки містом на GPS-радіодокументалістику з ШІ-гідом.,70,"WanderCast перетворює вашу щоденну прогулянку на 60-секундні випуски документального радіо.
+• GPS Geofence-radiodokumentärer: Spelar automatiskt upp 60-sekunders ljudavsnitt när du når nya kvarter, även i bakgrunden.
+• Fem Redaktionella Perspektiv: Växla mellan Gatudokumentär, Arkitektur & Fasader, Lokala Kuriosa, Broar & Infrastruktur samt Djup Lokalhistoria.
+• Live Frågor & Gatuquiz: Ställ frågor direkt till AI-programledaren om byggnader omkring dig eller spela historiskt quiz.
+• AI 3-Stopps Promenadplanerare: Skapa en rundslinga med 3 stopp och öppna gångvägbeskrivning i Google Maps.
+• Fasad- och Plakettskanner: Välj ett foto på en byggnad eller minnestavla för en 45-sekunders arkitekturkommentar.
+• Interaktiv Karta & GPX 1.1-export: Se din rutt i mörkt läge, gatukarta, satellit eller offline vektorradar och exportera GPX 1.1.
+• Lokalt Arkiv & 8 Märken: Spara promenader på enheten och lås upp 8 märken som Morgonpigg, Maratonlöpare och Geofence-pionjär.
+• Adaptivt Batterisparläge (<20%) & Offline-cache: Sänker GPS-intervallet (4s till 18s) under 20% batteri, 65m platscache och stöd för egen Gemini-nyckel (BYOK).
+• 20 Språk Inbyggda: Byt språk direkt för hela appen och röstuppläsningen.",1364
+uk,Ukrainian (Українська),WanderCast: ШІ Аудіотур,23,Перетворіть прогулянки містом на GPS-радіодокументалістику з ШІ-гідом.,70,"WanderCast перетворює вашу щоденну прогулянку на 60-секундні випуски локального документального радіо.
 
-Під час ходьби додаток визначає перетин кварталів та історичних геозон GPS, розповідаючи про архітектуру, історію та культуру району.
+Під час ходьби додаток визначає перетин кварталів і геозон GPS, розповідаючи без використання рук про місцеву історію, архітектуру, мости та міську культуру.
 
 ОСНОВНІ МОЖЛИВОСТІ:
-• GPS-радіодокументалістика: Автоматичний запуск 60-секундних аудіоепізодів при вході в новий квартал.
-• Карта підсумків туру та шкала прогресу: Перегляд пройденого маршруту, відсотка відвіданих історичних точок та експорт у GPX 1.1.
-• Сканер фасадів та історичних табличок: Аналіз фотографій будівель із 45-секундним аудіокоментарем.
-• Нагороди та цифрові значки (Room DB): Відкривайте значки «Рання пташка» та «Марафонець» за завершені маршрути.
-• Адаптивне енергозбереження (<20% заряду): Автоматично знижує частоту опитування GPS (з 4с до 18с) та оновлення тайлів карти при заряді нижче 20%.",843
+• GPS-радіодокументалістика: Автоматичний запуск 60-секундних аудіоепізодів при вході в новий квартал із підтримкою фонового режиму.
+• П’ять редакційних лінз: Вуличний репортаж, Архітектура та фасади, Локальні цікавинки, Мости й інфраструктура та Глибока історія.
+• Запитання ведучому та вулична вікторина: Ставте ШІ-ведучому запитання про будівлі поруч або проходьте історичні вікторини.
+• ШІ-планувальник маршрутів із 3 зупинок: Створюйте пішохідні кільцеві маршрути й відкривайте навігацію в Google Картах.
+• Сканер фасадів та історичних табличок: Оберіть фото будівлі чи меморіальної дошки для 45-секундного аудіокоментаря.
+• Інтерактивна карта та експорт GPX 1.1: Переглядайте маршрут на темній, вуличній, супутниковій чи офлайн векторній карті та експортуйте GPX 1.1.
+• Локальний архів і 8 відзнак: Зберігайте прогулянки на пристрої та відкривайте відзнаки «Рання пташка», «Марафонець» й інші.
+• Адаптивне енергозбереження (<20%) та кеш: За заряду нижче 20% частота GPS знижується з 4с до 18с; 65-метровий просторовий кеш і підтримка власного ключа Gemini (BYOK).
+• 20 мов інтерфейсу: Миттєве перемикання мови додатку та голосової озвучки.",1428

@@ -85,8 +85,8 @@ class LocationService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var notificationManager: NotificationManager
 
-    private var currentBlockTitle: String = "Scanning street grid…"
-    private var currentStatusSubtitle: String = "GPS geofence active • Walking guide ready"
+    private var currentBlockTitle: String = ""
+    private var currentStatusSubtitle: String = ""
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -107,8 +107,8 @@ class LocationService : Service() {
                 fix.accuracyMeters.toInt()
             )
             updateForegroundNotification(
-                title = currentBlockTitle,
-                subtitle = "$currentStatusSubtitle • $coordSummary"
+                title = currentBlockTitle.ifBlank { getString(R.string.notif_default_title) },
+                subtitle = "${currentStatusSubtitle.ifBlank { getString(R.string.notif_default_subtitle) }} • $coordSummary"
             )
         }
     }
@@ -117,6 +117,8 @@ class LocationService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        currentBlockTitle = getString(R.string.notif_default_title)
+        currentStatusSubtitle = getString(R.string.notif_default_subtitle)
         createNotificationChannel()
     }
 
@@ -246,13 +248,13 @@ class LocationService : Service() {
                 Looper.getMainLooper()
             )
             val modeBadge = if (profile.isBatterySaverActive) {
-                "Eco Battery Saver (${profile.gpsPollingIntervalMs / 1000}s GPS)"
+                getString(R.string.notif_mode_eco_format, (profile.gpsPollingIntervalMs / 1000).toInt())
             } else {
-                "Standard (${profile.gpsPollingIntervalMs / 1000}s GPS)"
+                getString(R.string.notif_mode_std_format, (profile.gpsPollingIntervalMs / 1000).toInt())
             }
             updateForegroundNotification(
-                title = currentBlockTitle,
-                subtitle = "$currentStatusSubtitle • $modeBadge"
+                title = currentBlockTitle.ifBlank { getString(R.string.notif_default_title) },
+                subtitle = "${currentStatusSubtitle.ifBlank { getString(R.string.notif_default_subtitle) }} • $modeBadge"
             )
         } catch (e: Exception) {
             Log.w(TAG, "Could not reconfigure foreground GPS polling interval", e)
@@ -299,10 +301,10 @@ class LocationService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "WanderCast Walking Guide",
+                getString(R.string.notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Tracks your neighborhood walk in the background to trigger localized radio documentaries."
+                description = getString(R.string.notif_channel_desc)
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(channel)
@@ -361,12 +363,12 @@ class LocationService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .addAction(
                 android.R.drawable.ic_btn_speak_now,
-                "Broadcast Block",
+                getString(R.string.notif_action_broadcast),
                 broadcastNowPendingIntent
             )
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "Stop Walk",
+                getString(R.string.notif_action_stop),
                 stopPendingIntent
             )
             .build()

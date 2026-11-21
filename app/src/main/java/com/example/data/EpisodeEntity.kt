@@ -1,10 +1,12 @@
 package com.example.data
 
+import androidx.annotation.StringRes
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.example.R
 
 /**
  * Stores generated audio narrative metadata and script content for a localized block documentary.
@@ -133,31 +135,37 @@ data class WalkBadgeEntity(
 
 enum class DocumentaryLens(
     val label: String,
+    @StringRes val labelRes: Int,
     val frequencyTag: String,
     val promptFocus: String
 ) {
     ALL_ROUNDER(
         label = "Street Documentary",
+        labelRes = R.string.lens_all_rounder,
         frequencyTag = "99.1 FM • URBAN",
         promptFocus = "a rich blend of neighborhood history, architectural details, and surprising local lore"
     ),
     ARCHITECTURE(
         label = "Architecture & Facades",
+        labelRes = R.string.lens_architecture,
         frequencyTag = "91.5 FM • DESIGN",
         promptFocus = "hidden architectural details, building materials, street grid evolution, cornices, churches, and urban design secrets"
     ),
     LOCAL_TRIVIA(
         label = "Diners & Local Trivia",
+        labelRes = R.string.lens_local_trivia,
         frequencyTag = "94.7 FM • CULTURE",
         promptFocus = "quirky neighborhood trivia, classic local diners, corner storefronts, cultural characters, and everyday street life"
     ),
     BRIDGES_INFRA(
         label = "Bridges & Hidden Grid",
+        labelRes = R.string.lens_bridges_infra,
         frequencyTag = "88.5 FM • INFRA",
         promptFocus = "bridges, buried creeks, transit lines, utility markers, typography on manhole covers, and civil engineering marvels"
     ),
     DEEP_HISTORY(
         label = "Deep Block History",
+        labelRes = R.string.lens_deep_history,
         frequencyTag = "101.3 FM • ARCHIVE",
         promptFocus = "what stood on this exact block 50 to 150 years ago, historical markers, forgotten events, and how the neighborhood transformed"
     )

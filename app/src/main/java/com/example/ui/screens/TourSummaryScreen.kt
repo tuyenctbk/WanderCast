@@ -35,14 +35,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -96,6 +97,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.EpisodeEntity
@@ -116,16 +119,16 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-enum class TourMapEngineMode(val label: String) {
-    KEYLESS_STREET_MAP("Live Street & Satellite Map"),
-    VECTOR_RADAR("Vector Radar (100% Offline)")
+enum class TourMapEngineMode(@StringRes val labelRes: Int) {
+    KEYLESS_STREET_MAP(R.string.map_mode_live_street),
+    VECTOR_RADAR(R.string.map_mode_vector_radar)
 }
 
-private val TILE_LAYER_LABELS = listOf(
-    "Dark Studio",
-    "Daylight Street",
-    "OSM Grid",
-    "Satellite Imagery"
+private val TILE_LAYER_LABEL_RES = listOf(
+    R.string.map_layer_dark,
+    R.string.map_layer_daylight,
+    R.string.map_layer_osm,
+    R.string.map_layer_satellite
 )
 
 data class HistoricalPointGeofenceStatus(
@@ -165,63 +168,175 @@ fun TourSummaryScreen(
     }
 
     val context = LocalContext.current
+    val waitingBlockText = stringResource(R.string.waiting_for_gps_block)
+    val liveSessionTitle = stringResource(
+        R.string.tour_active_session_title,
+        currentLocationState.streetBlockLabel.ifBlank { waitingBlockText }
+    )
+    val liveWalkLensLabel = stringResource(R.string.tour_live_gps_walk_lens)
 
-    // Construct a live virtual WalkRouteWithNarratives for the active session so the user can
-    // switch between completed Room routes and their current live walking session
+    // Construct a live WalkRouteWithNarratives ONLY when real GPS/session/episode data exists
     val liveSessionRouteWithNarratives = remember(
         activeSessionWaypoints,
         savedEpisodes,
-        currentLocationState
+        currentLocationState,
+        liveSessionTitle,
+        liveWalkLensLabel
     ) {
-        val pts = activeSessionWaypoints.ifEmpty {
-            listOf(
-                RouteWaypoint(
-                    currentLocationState.latitude - 0.0007,
-                    currentLocationState.longitude - 0.0005,
-                    "Start • ${currentLocationState.streetBlockLabel}"
-                ),
-                RouteWaypoint(
-                    currentLocationState.latitude,
-                    currentLocationState.longitude,
-                    currentLocationState.streetBlockLabel
+        val hasRealLiveData = activeSessionWaypoints.isNotEmpty() ||
+            currentLocationState.hasLocationFix ||
+            savedEpisodes.isNotEmpty()
+        if (!hasRealLiveData) {
+            null
+        } else {
+            val pts = when {
+                activeSessionWaypoints.isNotEmpty() -> activeSessionWaypoints
+                currentLocationState.hasLocationFix -> listOf(
+                    RouteWaypoint(
+                        currentLocationState.latitude,
+                        currentLocationState.longitude,
+                        currentLocationState.streetBlockLabel
+                    )
                 )
+                else -> savedEpisodes.take(5).map {
+                    RouteWaypoint(it.latitude, it.longitude, it.title)
+                }
+            }
+            val first = pts.first()
+            val last = pts.last()
+            val sessionEpisodes = savedEpisodes.take(5)
+            val now = System.currentTimeMillis()
+            WalkRouteWithNarratives(
+                route = WalkRouteEntity(
+                    routeId = -1L,
+                    routeTitle = liveSessionTitle,
+                    neighborhoodName = currentLocationState.neighborhoodName,
+                    cityRegion = currentLocationState.cityRegion,
+                    startBlockLabel = first.label,
+                    endBlockLabel = last.label,
+                    startLatitude = first.latitude,
+                    startLongitude = first.longitude,
+                    endLatitude = last.latitude,
+                    endLongitude = last.longitude,
+                    waypointsEncoded = WalkRouteEntity.encodeWaypoints(pts),
+                    totalDistanceMeters = currentLocationState.totalWalkedMeters,
+                    durationSeconds = (currentLocationState.blocksExploredCount * 120),
+                    blocksVisitedCount = currentLocationState.blocksExploredCount.coerceAtLeast(pts.size),
+                    narrativesGeneratedCount = sessionEpisodes.size,
+                    editorialLens = liveWalkLensLabel,
+                    googleMapsUrl = "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=${first.latitude},${first.longitude}&destination=${last.latitude},${last.longitude}",
+                    startedAtTimestamp = now,
+                    completedAtTimestamp = now
+                ),
+                narratives = sessionEpisodes
             )
         }
-        val first = pts.first()
-        val last = pts.last()
-        val sessionEpisodes = savedEpisodes.take(5)
-        WalkRouteWithNarratives(
-            route = WalkRouteEntity(
-                routeId = -1L,
-                routeTitle = "Active Session • ${currentLocationState.streetBlockLabel}",
-                neighborhoodName = currentLocationState.neighborhoodName,
-                cityRegion = currentLocationState.cityRegion,
-                startBlockLabel = first.label,
-                endBlockLabel = last.label,
-                startLatitude = first.latitude,
-                startLongitude = first.longitude,
-                endLatitude = last.latitude,
-                endLongitude = last.longitude,
-                waypointsEncoded = WalkRouteEntity.encodeWaypoints(pts),
-                totalDistanceMeters = currentLocationState.totalWalkedMeters.coerceAtLeast(320),
-                durationSeconds = (currentLocationState.blocksExploredCount * 240).coerceAtLeast(360),
-                blocksVisitedCount = currentLocationState.blocksExploredCount.coerceAtLeast(pts.size),
-                narrativesGeneratedCount = sessionEpisodes.size,
-                editorialLens = "Live GPS Walk",
-                googleMapsUrl = "https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=${first.latitude},${first.longitude}&destination=${last.latitude},${last.longitude}",
-                startedAtTimestamp = System.currentTimeMillis() - 900_000L,
-                completedAtTimestamp = System.currentTimeMillis()
-            ),
-            narratives = sessionEpisodes
-        )
     }
 
     val allTourOptions = remember(completedWalkRoutes, liveSessionRouteWithNarratives) {
-        if (completedWalkRoutes.isNotEmpty()) {
-            completedWalkRoutes + liveSessionRouteWithNarratives
-        } else {
-            listOf(liveSessionRouteWithNarratives)
+        buildList {
+            addAll(completedWalkRoutes)
+            if (liveSessionRouteWithNarratives != null) {
+                add(liveSessionRouteWithNarratives)
+            }
         }
+    }
+
+    if (allTourOptions.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 700.dp)
+                    .testTag("tour_summary_screen_list"),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("tour_summary_empty_card"),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.tour_summary_header_badge),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = stringResource(R.string.tour_empty_title),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = stringResource(R.string.tour_empty_subtitle),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Button(
+                                onClick = onNavigateBack,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.testTag("tour_empty_go_studio_btn")
+                            ) {
+                                Text(stringResource(R.string.tour_empty_cta_btn))
+                            }
+                            OutlinedButton(
+                                onClick = onOpenRewards,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("tour_summary_open_rewards_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "${stringResource(R.string.rewards_view_collection_btn)} ($unlockedBadgesCount/$totalBadgesCount)",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
+                }
+                item {
+                    BatteryPowerSaverCard(
+                        batteryProfile = batteryPowerProfile,
+                        onSelectOverrideMode = onSelectBatteryOverrideMode,
+                        onSimulateLowBattery = onSimulateLowBattery
+                    )
+                }
+            }
+        }
+        return
     }
 
     var selectedTourIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -313,7 +428,7 @@ fun TourSummaryScreen(
     var keylessFitBoundsTrigger by rememberSaveable { mutableIntStateOf(0) }
     var showGpxDialog by rememberSaveable { mutableStateOf(false) }
 
-    val mapTypeLabel = TILE_LAYER_LABELS[selectedMapTypeIndex % TILE_LAYER_LABELS.size]
+    val mapTypeLabel = stringResource(TILE_LAYER_LABEL_RES[selectedMapTypeIndex % TILE_LAYER_LABEL_RES.size])
 
     if (showGpxDialog) {
         val gpxXml = remember(activeRoute, triggeredPoints) {
@@ -323,7 +438,7 @@ fun TourSummaryScreen(
             onDismissRequest = { showGpxDialog = false },
             title = {
                 Text(
-                    text = "GPX 1.1 Walk Route & Historical Waypoints",
+                    text = stringResource(R.string.tour_gpx_dialog_title),
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -359,12 +474,12 @@ fun TourSummaryScreen(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share GPX File")
+                    Text(stringResource(R.string.tour_share_gpx_btn))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showGpxDialog = false }) {
-                    Text("Close")
+                    Text(stringResource(R.string.dialog_close))
                 }
             }
         )
@@ -401,10 +516,11 @@ fun TourSummaryScreen(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
+                                modifier = Modifier.weight(1f),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -416,7 +532,9 @@ fun TourSummaryScreen(
                                 Text(
                                     text = stringResource(R.string.tour_summary_header_badge),
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
 
@@ -434,7 +552,9 @@ fun TourSummaryScreen(
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = stringResource(R.string.tour_summary_snapshot_btn),
-                                    style = MaterialTheme.typography.labelMedium
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -482,7 +602,7 @@ fun TourSummaryScreen(
 
                         // Selector chips for completed Room walk routes & active session
                         Text(
-                            text = "SELECT WALK SESSION FROM ROOM DATABASE (${allTourOptions.size})",
+                            text = stringResource(R.string.tour_select_session_header, allTourOptions.size),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -503,9 +623,13 @@ fun TourSummaryScreen(
                                     label = {
                                         Text(
                                             if (isLiveSession) {
-                                                "Live Session (${tourOption.narratives.size} pts)"
+                                                stringResource(R.string.tour_live_session_chip, tourOption.narratives.size)
                                             } else {
-                                                "${tourOption.route.routeTitle.take(26)} (${tourOption.narratives.size} pts)"
+                                                stringResource(
+                                                    R.string.tour_route_chip_format,
+                                                    tourOption.route.routeTitle.take(26),
+                                                    tourOption.narratives.size
+                                                )
                                             }
                                         )
                                     },
@@ -546,15 +670,6 @@ fun TourSummaryScreen(
                 )
             }
 
-            // 1c. Adaptive Low-Battery (<20%) GPS Polling & Map Tile Refresh Rate Saver Card
-            item {
-                BatteryPowerSaverCard(
-                    batteryProfile = batteryPowerProfile,
-                    onSelectOverrideMode = onSelectBatteryOverrideMode,
-                    onSimulateLowBattery = onSimulateLowBattery
-                )
-            }
-
             // 2. Zero-Key Interactive Street & Satellite Map Preview Card + Offline Vector Radar
             item {
                 Card(
@@ -578,7 +693,12 @@ fun TourSummaryScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "${routeWaypoints.size} GPS path vertices • ${effectiveVisitedIds.size}/${triggeredPoints.size} geofence points visited",
+                            text = stringResource(
+                                R.string.tour_map_vertices_format,
+                                routeWaypoints.size,
+                                effectiveVisitedIds.size,
+                                triggeredPoints.size
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -596,7 +716,7 @@ fun TourSummaryScreen(
                                 FilterChip(
                                     selected = mapEngineMode == mode,
                                     onClick = { mapEngineMode = mode },
-                                    label = { Text(mode.label) },
+                                    label = { Text(stringResource(mode.labelRes)) },
                                     modifier = Modifier.testTag("map_engine_chip_${mode.name.lowercase()}")
                                 )
                             }
@@ -611,11 +731,11 @@ fun TourSummaryScreen(
                                     .horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                TILE_LAYER_LABELS.forEachIndexed { styleIdx, styleName ->
+                                TILE_LAYER_LABEL_RES.forEachIndexed { styleIdx, styleRes ->
                                     FilterChip(
-                                        selected = (selectedMapTypeIndex % TILE_LAYER_LABELS.size) == styleIdx,
+                                        selected = (selectedMapTypeIndex % TILE_LAYER_LABEL_RES.size) == styleIdx,
                                         onClick = { selectedMapTypeIndex = styleIdx },
-                                        label = { Text(styleName) },
+                                        label = { Text(stringResource(styleRes)) },
                                         modifier = Modifier.testTag("tile_layer_chip_$styleIdx")
                                     )
                                 }
@@ -638,7 +758,7 @@ fun TourSummaryScreen(
                                     KeylessInteractiveStreetMapView(
                                         waypoints = routeWaypoints,
                                         triggeredPoints = triggeredPoints,
-                                        selectedPointId = selectedPointId ?: activeEpisodeId,
+                                        selectedPointId = selectedPointId,
                                         tileStyleIndex = selectedMapTypeIndex,
                                         fitBoundsTrigger = keylessFitBoundsTrigger,
                                         onSelectPoint = { selectedPointId = it.id },
@@ -681,7 +801,7 @@ fun TourSummaryScreen(
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                         modifier = Modifier
                                             .clickable {
-                                                selectedMapTypeIndex = (selectedMapTypeIndex + 1) % TILE_LAYER_LABELS.size
+                                                selectedMapTypeIndex = (selectedMapTypeIndex + 1) % TILE_LAYER_LABEL_RES.size
                                             }
                                             .testTag("cycle_map_type_btn")
                                     ) {
@@ -692,7 +812,7 @@ fun TourSummaryScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Layers,
-                                                contentDescription = "Cycle Map Style",
+                                                contentDescription = stringResource(R.string.cd_cycle_map_style),
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(15.dp)
                                             )
@@ -722,12 +842,12 @@ fun TourSummaryScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.CenterFocusStrong,
-                                            contentDescription = "Fit Walk Route",
+                                            contentDescription = stringResource(R.string.cd_fit_walk_route),
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(15.dp)
                                         )
                                         Text(
-                                            text = "Fit Route",
+                                            text = stringResource(R.string.map_fit_route_btn),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -743,12 +863,12 @@ fun TourSummaryScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val durationMin = (activeRoute.durationSeconds.coerceAtLeast(60) / 60)
-                            TourTelemetryBadge("${activeRoute.totalDistanceMeters}m Walked")
-                            TourTelemetryBadge("${durationMin}m Duration")
-                            TourTelemetryBadge("${activeRoute.blocksVisitedCount} Blocks")
-                            TourTelemetryBadge("${effectiveVisitedIds.size}/${triggeredPoints.size} Visited")
-                            TourTelemetryBadge("Lens: ${activeRoute.editorialLens}")
+                            val durationMin = (activeRoute.durationSeconds / 60)
+                            TourTelemetryBadge(stringResource(R.string.tour_telemetry_walked, activeRoute.totalDistanceMeters))
+                            TourTelemetryBadge(stringResource(R.string.tour_telemetry_duration, durationMin))
+                            TourTelemetryBadge(stringResource(R.string.tour_telemetry_blocks, activeRoute.blocksVisitedCount))
+                            TourTelemetryBadge(stringResource(R.string.tour_telemetry_visited, effectiveVisitedIds.size, triggeredPoints.size))
+                            TourTelemetryBadge(stringResource(R.string.tour_telemetry_lens, activeRoute.editorialLens))
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -756,7 +876,8 @@ fun TourSummaryScreen(
                         // High-Value Export & Keyless Google Maps App Turn-by-Turn Actions
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             FilledTonalButton(
                                 onClick = {
@@ -771,8 +892,10 @@ fun TourSummaryScreen(
                                     )
                                 },
                                 shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(46.dp)
                                     .testTag("share_story_postcard_btn")
                             ) {
                                 Icon(
@@ -781,14 +904,21 @@ fun TourSummaryScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.tour_summary_share_postcard))
+                                Text(
+                                    text = stringResource(R.string.tour_summary_share_postcard),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             OutlinedButton(
                                 onClick = { showGpxDialog = true },
                                 shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(46.dp)
                                     .testTag("export_gpx_track_btn")
                             ) {
                                 Icon(
@@ -797,7 +927,12 @@ fun TourSummaryScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.tour_summary_export_gpx))
+                                Text(
+                                    text = stringResource(R.string.tour_summary_export_gpx),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
 
@@ -820,15 +955,24 @@ fun TourSummaryScreen(
                                 .testTag("open_external_google_maps_walk_btn")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.DirectionsWalk,
+                                imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.route_planner_title))
+                            Text(stringResource(R.string.tour_open_google_maps_btn))
                         }
                     }
                 }
+            }
+
+            // 2b. Adaptive Low-Battery (<20%) GPS Polling & Map Tile Refresh Rate Saver Card
+            item {
+                BatteryPowerSaverCard(
+                    batteryProfile = batteryPowerProfile,
+                    onSelectOverrideMode = onSelectBatteryOverrideMode,
+                    onSimulateLowBattery = onSimulateLowBattery
+                )
             }
 
             // 3. Section Header: Key Historical & Interesting Points Triggered (from Room DB)
@@ -856,7 +1000,11 @@ fun TourSummaryScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Retrieved from Room Database (${effectiveVisitedIds.size} of ${triggeredPoints.size} visited via GPS geofence)",
+                                text = stringResource(
+                                    R.string.tour_points_retrieved_format,
+                                    effectiveVisitedIds.size,
+                                    triggeredPoints.size
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -962,7 +1110,7 @@ private fun GeofenceHistoricalProgressCard(
                 ) {
                     Icon(
                         imageVector = if (isComplete) Icons.Default.CheckCircle else Icons.Default.GpsFixed,
-                        contentDescription = "Geofence Tour Completion",
+                        contentDescription = stringResource(R.string.tour_summary_geofence_title),
                         tint = accentColor
                     )
                     Column {
@@ -1121,27 +1269,34 @@ private fun GeofenceHistoricalProgressCard(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.1f)
+                        .weight(1f)
+                        .height(46.dp)
                         .testTag("tour_summary_walk_next_point_btn")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.DirectionsWalk,
+                        imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = stringResource(R.string.tour_summary_walk_next_btn),
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 FilledTonalButton(
                     onClick = { onWalkToNextPoint(true) },
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.1f)
+                        .weight(1f)
+                        .height(46.dp)
                         .testTag("tour_summary_walk_narrate_next_btn")
                 ) {
                     Icon(
@@ -1152,19 +1307,22 @@ private fun GeofenceHistoricalProgressCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.tour_summary_walk_narrate_btn),
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 IconButton(
                     onClick = onResetProgress,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(46.dp)
                         .testTag("tour_summary_reset_progress_btn")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.retry_broadcast_btn),
+                        contentDescription = stringResource(R.string.cd_reset_progress),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1188,14 +1346,18 @@ private fun TriggeredHistoricalPointCard(
     val stopNumber = pointStatus.stopNumber
     var transcriptExpanded by rememberSaveable { mutableStateOf(false) }
     val formattedTime = remember(episode.timestamp) {
-        SimpleDateFormat("MMM d • h:mm a", Locale.US).format(Date(episode.timestamp))
+        SimpleDateFormat("MMM d • h:mm a", Locale.getDefault()).format(Date(episode.timestamp))
     }
     val coordLabel = remember(episode.latitude, episode.longitude) {
+        val ns = if (episode.latitude >= 0.0) "N" else "S"
+        val ew = if (episode.longitude >= 0.0) "E" else "W"
         String.format(
             Locale.US,
-            "%.4f°N, %.4f°W",
+            "%.4f°%s, %.4f°%s",
             kotlin.math.abs(episode.latitude),
-            kotlin.math.abs(episode.longitude)
+            ns,
+            kotlin.math.abs(episode.longitude),
+            ew
         )
     }
 
@@ -1268,7 +1430,11 @@ private fun TriggeredHistoricalPointCard(
                 ) {
                     Icon(
                         imageVector = if (episode.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = "Bookmark Historical Point",
+                        contentDescription = if (episode.isBookmarked) {
+                            stringResource(R.string.cd_bookmark_remove)
+                        } else {
+                            stringResource(R.string.cd_bookmark_add)
+                        },
                         tint = if (episode.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1295,11 +1461,23 @@ private fun TriggeredHistoricalPointCard(
                     Text(
                         text = when {
                             pointStatus.isCurrentlyInsideGeofence ->
-                                "✓ INSIDE ${geofenceRadiusMeters}M GEOFENCE (${pointStatus.distanceFromCurrentGpsMeters}M AWAY)"
+                                stringResource(
+                                    R.string.tour_point_inside_geofence,
+                                    geofenceRadiusMeters,
+                                    pointStatus.distanceFromCurrentGpsMeters
+                                )
                             pointStatus.isVisited ->
-                                "✓ VISITED • GEOFENCE TRIGGERED (${pointStatus.distanceFromCurrentGpsMeters}M ${pointStatus.bearingCardinal})"
+                                stringResource(
+                                    R.string.tour_point_visited_geofence,
+                                    pointStatus.distanceFromCurrentGpsMeters,
+                                    pointStatus.bearingCardinal
+                                )
                             else ->
-                                "⏳ UPCOMING • ${pointStatus.distanceFromCurrentGpsMeters}M ${pointStatus.bearingCardinal} FROM CURRENT GPS"
+                                stringResource(
+                                    R.string.tour_point_upcoming_geofence,
+                                    pointStatus.distanceFromCurrentGpsMeters,
+                                    pointStatus.bearingCardinal
+                                )
                         },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
@@ -1356,7 +1534,7 @@ private fun TriggeredHistoricalPointCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "KEY HISTORICAL & ARCHITECTURAL HIGHLIGHTS",
+                        text = stringResource(R.string.tour_point_highlights_header),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -1409,10 +1587,10 @@ private fun TriggeredHistoricalPointCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                TourTelemetryBadge("Voice: ${episode.voicePersona}")
-                TourTelemetryBadge("${episode.speechRate}x")
-                TourTelemetryBadge("${episode.wordCount} words • ${episode.durationSeconds}s")
-                TourTelemetryBadge("Model: ${episode.aiModelUsed}")
+                TourTelemetryBadge(stringResource(R.string.archive_meta_voice, episode.voicePersona))
+                TourTelemetryBadge(stringResource(R.string.archive_meta_speed, episode.speechRate))
+                TourTelemetryBadge(stringResource(R.string.archive_meta_words_dur, episode.wordCount, episode.durationSeconds))
+                TourTelemetryBadge(stringResource(R.string.archive_meta_model, episode.aiModelUsed))
             }
 
             AnimatedVisibility(visible = transcriptExpanded) {
@@ -1420,7 +1598,7 @@ private fun TriggeredHistoricalPointCard(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "FULL 60-SECOND DOCUMENTARY TRANSCRIPT",
+                        text = stringResource(R.string.tour_point_transcript_header),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -1450,7 +1628,10 @@ private fun TriggeredHistoricalPointCard(
                     FilledTonalButton(
                         onClick = onPlayNarrative,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("summary_point_play_btn_${episode.id}")
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .height(42.dp)
+                            .testTag("summary_point_play_btn_${episode.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
@@ -1458,27 +1639,41 @@ private fun TriggeredHistoricalPointCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Narrate")
+                        Text(stringResource(R.string.narrate_btn), maxLines = 1, softWrap = false)
                     }
 
                     OutlinedButton(
                         onClick = onWalkToGeofence,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("summary_point_walk_geofence_btn_${episode.id}")
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .height(42.dp)
+                            .testTag("summary_point_walk_geofence_btn_${episode.id}")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.DirectionsWalk,
+                            imageVector = Icons.AutoMirrored.Filled.DirectionsWalk,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (pointStatus.isVisited) "Visited ✓" else "Walk Here")
+                        Text(
+                            if (pointStatus.isVisited) {
+                                stringResource(R.string.tour_point_visited_btn)
+                            } else {
+                                stringResource(R.string.tour_point_walk_here_btn)
+                            },
+                            maxLines = 1,
+                            softWrap = false
+                        )
                     }
 
                     OutlinedButton(
                         onClick = onFocusOnMap,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("summary_point_focus_map_btn_${episode.id}")
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .height(42.dp)
+                            .testTag("summary_point_focus_map_btn_${episode.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.CenterFocusStrong,
@@ -1486,7 +1681,7 @@ private fun TriggeredHistoricalPointCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Focus Map")
+                        Text(stringResource(R.string.tour_point_focus_map_btn), maxLines = 1, softWrap = false)
                     }
                 }
 
@@ -1498,7 +1693,11 @@ private fun TriggeredHistoricalPointCard(
                 ) {
                     Icon(
                         imageVector = if (transcriptExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (transcriptExpanded) "Collapse transcript" else "Expand transcript"
+                        contentDescription = if (transcriptExpanded) {
+                            stringResource(R.string.cd_collapse_transcript)
+                        } else {
+                            stringResource(R.string.cd_expand_transcript)
+                        }
                     )
                 }
             }
@@ -1542,10 +1741,10 @@ private fun InteractiveVectorTourCanvas(
             val allLngs = waypoints.map { it.longitude } + triggeredPoints.map { it.longitude }
             if (allLats.isEmpty() || allLngs.isEmpty()) return@Canvas
 
-            val minLat = allLats.minOrNull() ?: 37.7950
-            val maxLat = allLats.maxOrNull() ?: 37.7980
-            val minLng = allLngs.minOrNull() ?: -122.4060
-            val maxLng = allLngs.maxOrNull() ?: -122.4020
+            val minLat = allLats.minOrNull() ?: return@Canvas
+            val maxLat = allLats.maxOrNull() ?: return@Canvas
+            val minLng = allLngs.minOrNull() ?: return@Canvas
+            val maxLng = allLngs.maxOrNull() ?: return@Canvas
 
             val latSpan = (maxLat - minLat).coerceAtLeast(0.0008)
             val lngSpan = (maxLng - minLng).coerceAtLeast(0.0008)
@@ -1625,7 +1824,7 @@ private fun InteractiveVectorTourCanvas(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = if (visited) Icons.Default.CheckCircle else Icons.Default.DirectionsWalk,
+                            imageVector = if (visited) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.DirectionsWalk,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp)
                         )

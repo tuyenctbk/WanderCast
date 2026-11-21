@@ -36,12 +36,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.HistoryEdu
@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.AppEventEntity
@@ -118,7 +119,7 @@ fun resolveBadgeMetadata(badgeId: String): BadgeTitleAndDesc {
         "marathoner" -> BadgeTitleAndDesc(
             titleRes = R.string.badge_marathoner_title,
             descRes = R.string.badge_marathoner_desc,
-            icon = Icons.Default.DirectionsRun,
+            icon = Icons.AutoMirrored.Filled.DirectionsRun,
             accentColor = RadarTeal
         )
         "first_transmission" -> BadgeTitleAndDesc(
@@ -631,7 +632,7 @@ private fun DigitalBadgeCollectionCard(
 
     val formattedDate = remember(badge.unlockedAtTimestamp) {
         badge.unlockedAtTimestamp?.let {
-            SimpleDateFormat("MMM d • h:mm a", Locale.US).format(Date(it))
+            SimpleDateFormat("MMM d • h:mm a", Locale.getDefault()).format(Date(it))
         }
     }
 
@@ -728,13 +729,22 @@ private fun DigitalBadgeCollectionCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Milestone Progress Bar & Counter
+            val localizedUnit = when (badge.progressUnit.lowercase(Locale.US)) {
+                "tours" -> stringResource(R.string.unit_tours)
+                "dawn_walks" -> stringResource(R.string.unit_dawn_walks)
+                "meters" -> stringResource(R.string.unit_meters)
+                "dispatches" -> stringResource(R.string.unit_dispatches)
+                "checkpoints" -> stringResource(R.string.unit_checkpoints)
+                "night_walks" -> stringResource(R.string.unit_night_walks)
+                else -> stringResource(R.string.unit_pts)
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${badge.currentProgress} / ${badge.targetProgress} ${badge.progressUnit.uppercase(Locale.US)}",
+                    text = "${badge.currentProgress} / ${badge.targetProgress} $localizedUnit",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = if (badge.isUnlocked) accentColor else MaterialTheme.colorScheme.primary
@@ -767,7 +777,7 @@ private fun DigitalBadgeCollectionCard(
             if (badge.isUnlocked) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -786,7 +796,9 @@ private fun DigitalBadgeCollectionCard(
                                     text = badge.unlockedTourTitle,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -794,7 +806,8 @@ private fun DigitalBadgeCollectionCard(
                             Text(
                                 text = formattedDate,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
                             )
                         }
                     }
@@ -802,7 +815,10 @@ private fun DigitalBadgeCollectionCard(
                     FilledTonalButton(
                         onClick = onNarrateAchievement,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("narrate_badge_btn_${badge.badgeId}")
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .height(42.dp)
+                            .testTag("narrate_badge_btn_${badge.badgeId}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.RecordVoiceOver,
@@ -812,14 +828,17 @@ private fun DigitalBadgeCollectionCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.rewards_narrate_badge_btn),
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
                         onClick = onUnlockMilestone,
@@ -828,8 +847,10 @@ private fun DigitalBadgeCollectionCard(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
                         modifier = Modifier
                             .weight(1f)
+                            .height(46.dp)
                             .testTag("unlock_badge_milestone_btn_${badge.badgeId}")
                     ) {
                         Icon(
@@ -840,19 +861,25 @@ private fun DigitalBadgeCollectionCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.rewards_complete_milestone_btn),
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     OutlinedButton(
                         onClick = onNarrateAchievement,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.testTag("preview_badge_voice_btn_${badge.badgeId}")
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier
+                            .size(46.dp)
+                            .testTag("preview_badge_voice_btn_${badge.badgeId}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            contentDescription = stringResource(R.string.cd_preview_badge_audio),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

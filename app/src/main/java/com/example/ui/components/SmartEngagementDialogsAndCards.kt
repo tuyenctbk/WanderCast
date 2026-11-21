@@ -122,6 +122,26 @@ fun SmartAutoPopupDialog(
         SmartPromptType.APP_UPDATE -> Icons.Default.SystemUpdateAlt
     }
 
+    val displayNeighborhood = proposal.activeNeighborhood.ifBlank {
+        stringResource(R.string.smart_default_neighborhood)
+    }
+    val localizedShareMessage = stringResource(
+        R.string.smart_share_message_format,
+        displayNeighborhood,
+        proposal.unlockedBadgesCount,
+        proposal.totalWalkedMeters
+    )
+    val contextHeadline = when (proposal.promptType) {
+        SmartPromptType.RATE_APP -> stringResource(R.string.smart_rate_headline_format, displayNeighborhood)
+        SmartPromptType.SHARE_APP -> stringResource(R.string.smart_share_headline_format, displayNeighborhood)
+        SmartPromptType.APP_UPDATE -> stringResource(R.string.smart_update_headline_format, proposal.latestAvailableVersion)
+    }
+    val contextSubtitle = when (proposal.promptType) {
+        SmartPromptType.RATE_APP -> stringResource(R.string.smart_rate_subtitle_format, proposal.unlockedBadgesCount)
+        SmartPromptType.SHARE_APP -> stringResource(R.string.smart_share_subtitle)
+        SmartPromptType.APP_UPDATE -> stringResource(R.string.smart_update_subtitle_format, proposal.installedVersion)
+    }
+
     Dialog(
         onDismissRequest = onSnoozeWithBackoff,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -168,7 +188,7 @@ fun SmartAutoPopupDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = proposal.promptType.badgeTag,
+                                text = stringResource(proposal.promptType.badgeTagRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = accentColor,
                                 fontWeight = FontWeight.Bold
@@ -184,7 +204,7 @@ fun SmartAutoPopupDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Snooze suggestion",
+                            contentDescription = stringResource(R.string.cd_snooze_suggestion),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -192,14 +212,14 @@ fun SmartAutoPopupDialog(
 
                 // Headline & Context Subtitle
                 Text(
-                    text = proposal.contextHeadline,
+                    text = contextHeadline,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.ExtraBold
                 )
 
                 Text(
-                    text = proposal.contextSubtitle,
+                    text = contextSubtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -231,7 +251,11 @@ fun SmartAutoPopupDialog(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Trigger: ${proposal.triggerEvent} • Delight ${proposal.delightScoreAtTrigger}/100 • Max 1/session",
+                                text = stringResource(
+                                    R.string.smart_popup_trigger_meta,
+                                    proposal.triggerEvent,
+                                    proposal.delightScoreAtTrigger
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -275,7 +299,7 @@ fun SmartAutoPopupDialog(
                                         ) {
                                             Icon(
                                                 imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
-                                                contentDescription = "$star Stars",
+                                                contentDescription = stringResource(R.string.cd_star_rating, star),
                                                 tint = if (isFilled) BrassAmber else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.size(34.dp)
                                             )
@@ -284,9 +308,9 @@ fun SmartAutoPopupDialog(
                                 }
 
                                 val sentimentCaption = when (selectedStars) {
-                                    5 -> "5/5 • Studio Masterpiece! We'll open Google Play Review & never ask again."
-                                    4 -> "4/5 • Great Frequency! Share your review on Google Play."
-                                    else -> "$selectedStars/5 • Thank you for your honesty. Tell us what to improve directly below:"
+                                    5 -> stringResource(R.string.smart_rate_caption_5)
+                                    4 -> stringResource(R.string.smart_rate_caption_4)
+                                    else -> stringResource(R.string.smart_rate_caption_low, selectedStars)
                                 }
                                 Text(
                                     text = sentimentCaption,
@@ -299,8 +323,8 @@ fun SmartAutoPopupDialog(
                                     OutlinedTextField(
                                         value = privateFeedbackText,
                                         onValueChange = { privateFeedbackText = it },
-                                        label = { Text("What can we improve in WanderCast?") },
-                                        placeholder = { Text("e.g., voice speed, map tiles, neighborhood depth...") },
+                                        label = { Text(stringResource(R.string.smart_rate_feedback_label)) },
+                                        placeholder = { Text(stringResource(R.string.smart_rate_feedback_placeholder)) },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .testTag("smart_rate_private_feedback_input"),
@@ -335,14 +359,14 @@ fun SmartAutoPopupDialog(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "WALK TELEMETRY DISPATCH CARD",
+                                        text = stringResource(R.string.smart_share_card_header),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = RadarTeal,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                                 Text(
-                                    text = proposal.sharePreviewMessage,
+                                    text = localizedShareMessage,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontFamily = FontFamily.Monospace
@@ -357,56 +381,30 @@ fun SmartAutoPopupDialog(
                             shape = RoundedCornerShape(16.dp),
                             border = BorderStroke(1.dp, BrassAmber.copy(alpha = 0.35f))
                         ) {
-                            Column(
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                Text(
+                                    text = stringResource(R.string.smart_update_version_header, proposal.installedVersion),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = BrassAmber,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Surface(
+                                    color = RadarTeal.copy(alpha = 0.16f),
+                                    shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
-                                        text = "WHAT'S NEW IN VERSION ${proposal.latestAvailableVersion}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = BrassAmber,
-                                        fontWeight = FontWeight.Bold
+                                        text = "v${proposal.installedVersion}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = RadarTeal,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                     )
-                                    Surface(
-                                        color = RadarTeal.copy(alpha = 0.16f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            text = "v${proposal.installedVersion} → v${proposal.latestAvailableVersion}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = RadarTeal,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
-                                    }
-                                }
-
-                                proposal.releaseNotes.forEach { note ->
-                                    Row(
-                                        verticalAlignment = Alignment.Top,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = RadarTeal,
-                                            modifier = Modifier
-                                                .padding(top = 2.dp)
-                                                .size(15.dp)
-                                        )
-                                        Text(
-                                            text = note,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -421,7 +419,7 @@ fun SmartAutoPopupDialog(
                         "${stringResource(R.string.smart_rate_private_feedback_btn)} ($selectedStars★)"
                     }
                     SmartPromptType.SHARE_APP -> stringResource(R.string.smart_share_walk_card_btn)
-                    SmartPromptType.APP_UPDATE -> "${stringResource(R.string.smart_update_install_btn)} v${proposal.latestAvailableVersion}"
+                    SmartPromptType.APP_UPDATE -> stringResource(R.string.smart_update_install_btn)
                 }
 
                 Button(
@@ -430,9 +428,9 @@ fun SmartAutoPopupDialog(
                             SmartPromptType.RATE_APP -> if (selectedStars >= 4) {
                                 "STORE_RATING_${selectedStars}_STARS"
                             } else {
-                                "PRIVATE_FEEDBACK_${selectedStars}_STARS:${privateFeedbackText.ifBlank { "General improvement note" }}"
+                                "PRIVATE_FEEDBACK_${selectedStars}_STARS:${privateFeedbackText.ifBlank { "General feedback" }}"
                             }
-                            SmartPromptType.SHARE_APP -> proposal.sharePreviewMessage
+                            SmartPromptType.SHARE_APP -> localizedShareMessage
                             SmartPromptType.APP_UPDATE -> "APPLY_UPDATE_${proposal.latestAvailableVersion}"
                         }
                         onAcceptPrimaryAction(payload)
@@ -471,9 +469,10 @@ fun SmartAutoPopupDialog(
                 ) {
                     OutlinedButton(
                         onClick = onSnoozeWithBackoff,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(46.dp)
                             .testTag("smart_popup_snooze_btn"),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -487,14 +486,16 @@ fun SmartAutoPopupDialog(
                             text = snoozeLabel,
                             style = MaterialTheme.typography.labelMedium,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     TextButton(
                         onClick = onOptOutForever,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier
-                            .height(48.dp)
+                            .height(46.dp)
                             .testTag("smart_popup_opt_out_btn")
                     ) {
                         Icon(
@@ -507,7 +508,9 @@ fun SmartAutoPopupDialog(
                         Text(
                             text = optOutLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -620,7 +623,7 @@ fun SmartEngagementTelemetryCard(
                     border = BorderStroke(1.dp, delightColor.copy(alpha = 0.45f))
                 ) {
                     Text(
-                        text = "Delight ${telemetryState.delightScore}/100",
+                        text = stringResource(R.string.smart_delight_pill_format, telemetryState.delightScore),
                         style = MaterialTheme.typography.labelMedium,
                         color = delightColor,
                         fontWeight = FontWeight.ExtraBold,
@@ -640,20 +643,28 @@ fun SmartEngagementTelemetryCard(
                     color = delightColor,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        text = "Session #${telemetryState.sessionCount} • ${telemetryState.lifetimePositiveActionsCount} positive walk actions",
+                        text = stringResource(
+                            R.string.smart_session_actions_format,
+                            telemetryState.sessionCount,
+                            telemetryState.lifetimePositiveActionsCount
+                        ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Thresholds: Update ≥25 • Share ≥48 • Rate ≥65",
+                        text = stringResource(R.string.smart_thresholds_legend),
                         style = MaterialTheme.typography.labelSmall,
                         color = BrassAmber,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -668,15 +679,19 @@ fun SmartEngagementTelemetryCard(
                 GuardrailStatusChip(
                     icon = Icons.Default.Security,
                     label = if (telemetryState.isColdStartProtected) {
-                        "Startup Guard: ${telemetryState.coldStartRemainingSeconds}s Blocked"
+                        stringResource(R.string.smart_guard_startup_blocked, telemetryState.coldStartRemainingSeconds)
                     } else {
-                        "Startup Guard: Clear (>45s)"
+                        stringResource(R.string.smart_guard_startup_clear)
                     },
                     accentColor = if (telemetryState.isColdStartProtected) BrassAmber else RadarTeal
                 )
                 GuardrailStatusChip(
                     icon = Icons.Default.Block,
-                    label = "Session Cap: ${telemetryState.promptsShownThisSession}/${telemetryState.maxPromptsPerSession} Shown",
+                    label = stringResource(
+                        R.string.smart_guard_session_cap,
+                        telemetryState.promptsShownThisSession,
+                        telemetryState.maxPromptsPerSession
+                    ),
                     accentColor = if (telemetryState.promptsShownThisSession >= telemetryState.maxPromptsPerSession) {
                         SignalCoral
                     } else {
@@ -686,29 +701,37 @@ fun SmartEngagementTelemetryCard(
                 GuardrailStatusChip(
                     icon = Icons.Default.Star,
                     label = if (telemetryState.rateCompletedOrOptedOut) {
-                        "Rate: Done/Opt-Out"
+                        stringResource(R.string.smart_guard_rate_done)
                     } else {
-                        "Rate: ${telemetryState.rateImpressionsCount}/${telemetryState.rateMaxLifetimeImpressions} (14d×2ⁿ)"
+                        stringResource(
+                            R.string.smart_guard_rate_count,
+                            telemetryState.rateImpressionsCount,
+                            telemetryState.rateMaxLifetimeImpressions
+                        )
                     },
                     accentColor = BrassAmber
                 )
                 GuardrailStatusChip(
                     icon = Icons.Default.Share,
                     label = if (telemetryState.shareOptedOut) {
-                        "Share: Opted Out"
+                        stringResource(R.string.smart_guard_share_optout)
                     } else {
-                        "Share: ${telemetryState.shareImpressionsCount}/${telemetryState.shareMaxLifetimeImpressions} (5d×2ⁿ)"
+                        stringResource(
+                            R.string.smart_guard_share_count,
+                            telemetryState.shareImpressionsCount,
+                            telemetryState.shareMaxLifetimeImpressions
+                        )
                     },
                     accentColor = RadarTeal
                 )
                 GuardrailStatusChip(
                     icon = Icons.Default.SystemUpdateAlt,
                     label = if (telemetryState.updateAppliedInSession) {
-                        "Update: v${telemetryState.updateAvailableVersion} Installed"
+                        stringResource(R.string.smart_guard_update_installed, telemetryState.updateAvailableVersion)
                     } else if (telemetryState.updateSkippedVersion == telemetryState.updateAvailableVersion) {
-                        "Update: v${telemetryState.updateAvailableVersion} Skipped"
+                        stringResource(R.string.smart_guard_update_skipped, telemetryState.updateAvailableVersion)
                     } else {
-                        "Update: v${telemetryState.updateInstalledVersion}→v${telemetryState.updateAvailableVersion}"
+                        stringResource(R.string.smart_guard_update_version, telemetryState.updateInstalledVersion)
                     },
                     accentColor = BrassAmber
                 )
@@ -735,7 +758,7 @@ fun SmartEngagementTelemetryCard(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "LATEST ALGORITHM DECISION",
+                            text = stringResource(R.string.smart_latest_decision_header),
                             style = MaterialTheme.typography.labelSmall,
                             color = BrassAmber,
                             fontWeight = FontWeight.Bold
@@ -753,13 +776,15 @@ fun SmartEngagementTelemetryCard(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
                         onClick = onSimulatePeakDelightTrigger,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
+                            .weight(1.15f)
+                            .height(46.dp)
                             .testTag("simulate_peak_delight_auto_popup_btn"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = BrassAmber,
@@ -775,29 +800,33 @@ fun SmartEngagementTelemetryCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.smart_simulate_peak_delight_btn),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     OutlinedButton(
                         onClick = onResetCooldowns,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         modifier = Modifier
-                            .height(48.dp)
+                            .height(46.dp)
                             .testTag("reset_smart_cooldowns_btn"),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset cooldowns",
+                            contentDescription = stringResource(R.string.cd_reset_cooldowns),
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = stringResource(R.string.smart_reset_caps_btn),
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -811,10 +840,10 @@ fun SmartEngagementTelemetryCard(
                         onClick = { onPreviewPopup(SmartPromptType.RATE_APP) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                             .testTag("preview_rate_app_popup_btn"),
                         shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Star,
@@ -822,12 +851,12 @@ fun SmartEngagementTelemetryCard(
                             tint = BrassAmber,
                             modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "Rate Popup",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            text = stringResource(R.string.smart_preview_rate_btn),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
 
@@ -835,10 +864,10 @@ fun SmartEngagementTelemetryCard(
                         onClick = { onPreviewPopup(SmartPromptType.SHARE_APP) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                             .testTag("preview_share_app_popup_btn"),
                         shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -846,12 +875,12 @@ fun SmartEngagementTelemetryCard(
                             tint = RadarTeal,
                             modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "Share Popup",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            text = stringResource(R.string.smart_preview_share_btn),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
 
@@ -859,10 +888,10 @@ fun SmartEngagementTelemetryCard(
                         onClick = { onPreviewPopup(SmartPromptType.APP_UPDATE) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                             .testTag("preview_update_app_popup_btn"),
                         shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.SystemUpdateAlt,
@@ -870,12 +899,12 @@ fun SmartEngagementTelemetryCard(
                             tint = BrassAmber,
                             modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "Update Popup",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            text = stringResource(R.string.smart_preview_update_btn),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -886,10 +915,11 @@ fun SmartEngagementTelemetryCard(
             // 6. Live Room DB App Event Logging Stream (`app_events` table)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -900,17 +930,22 @@ fun SmartEngagementTelemetryCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "ROOM DB EVENT LOG (${recentAppEvents.size} TRACKED EVENTS)",
+                        text = stringResource(R.string.smart_event_log_header, recentAppEvents.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = RadarTeal,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 if (recentAppEvents.isNotEmpty()) {
                     TextButton(
                         onClick = onClearEvents,
-                        modifier = Modifier.testTag("clear_logged_app_events_btn")
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier
+                            .height(36.dp)
+                            .testTag("clear_logged_app_events_btn")
                     ) {
                         Icon(
                             imageVector = Icons.Default.DeleteSweep,
@@ -919,8 +954,10 @@ fun SmartEngagementTelemetryCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Clear Log",
-                            style = MaterialTheme.typography.labelSmall
+                            text = stringResource(R.string.smart_clear_log_btn),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -991,7 +1028,7 @@ fun SmartEngagementTelemetryCard(
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
-                                    text = "$deltaPrefix pts",
+                                    text = stringResource(R.string.smart_pts_suffix, deltaPrefix),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = deltaColor,
                                     fontWeight = FontWeight.Bold,
