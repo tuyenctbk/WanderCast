@@ -1,0 +1,6 @@
+{
+  "name": "WanderCast",
+  "description": "GPS-Triggered AI Walking Guide that turns your daily walk into an episodic, localized radio documentary.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
